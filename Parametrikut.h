@@ -5,7 +5,6 @@
 
 #include <QMainWindow>
 #include <QApplication>
-#include <QAction>
 #include <QMessageBox>
 #include <QHBoxLayout>
 #include <QVBoxLayout>
@@ -17,6 +16,8 @@ class Parametrikut : public QMainWindow
     Q_OBJECT
 
 public:
+
+
 
     Assembly* assembly = nullptr;
 

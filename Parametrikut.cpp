@@ -10,13 +10,13 @@ Parametrikut::Parametrikut(QWidget *parent)
     assembly = new Assembly();
     assembly->build();
 
-    qApp->setStyleSheet("QLineEdit {width: 70px; border: 0px solid;}");
+
 
     centralWidget = new QWidget(this);
     setCentralWidget(centralWidget);
 
-    int margin = 10;
-    int spacing = 10;
+    int margin = 20;
+    int spacing = 20;
 
     QHBoxLayout* centralLayout = new QHBoxLayout();
     centralLayout->setContentsMargins(0, 0, 0, 0);
@@ -48,7 +48,11 @@ Parametrikut::Parametrikut(QWidget *parent)
 
     centralLayout->addWidget(viewer, 1);
 
-    resize(700, 500);
+    qApp->setStyleSheet(R"(
+        QMainWindow {
+            background-color: #ffffff;
+        } 
+    )");
 }
 
 void Parametrikut::buildGrid(std::vector<Param> params) {

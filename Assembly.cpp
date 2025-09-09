@@ -36,7 +36,6 @@ Assembly::Assembly()
 
 		addParam("Width", width);
 		addParam("Depth", depth);
-		addParam("Height", height);
 	}
 }
 
@@ -65,7 +64,7 @@ void Assembly::build()
 	/* Back */ {
 
 		float w = width - tabWidth * 2 - slotThicknessMid * 2;
-		float h = height + thickness * levels;
+		float h = height;
 		TopoDS_Shape backBase = BRepBuilderAPI_MakeFace(gp_Pln(), -w / 2, w / 2, -h / 2, h / 2);
 
 		TopoDS_Shape backSlot = BRepBuilderAPI_MakeFace(gp_Pln(), -slotLength / 2, slotLength / 2, -slotThicknessMid / 2, slotThicknessMid / 2);
