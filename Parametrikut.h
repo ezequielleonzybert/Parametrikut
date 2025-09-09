@@ -6,12 +6,10 @@
 #include <QMainWindow>
 #include <QApplication>
 #include <QAction>
-#include <QLabel>
 #include <QMessageBox>
 #include <QHBoxLayout>
 #include <QVBoxLayout>
 #include <QPushButton>
-#include <QLineEdit>
 #include <QGridLayout>
 
 class Parametrikut : public QMainWindow
@@ -27,11 +25,12 @@ public:
     QWidget* centralWidget = nullptr;
     QWidget* leftWidget = nullptr;
     QWidget* rightWidget = nullptr;
+    QGridLayout* gridLayout = nullptr;
     QPushButton* btnExport = nullptr;
-    QLineEdit* leThickness = nullptr;
-    QLineEdit* leLevels = nullptr;
 
     Parametrikut(QWidget *parent = nullptr);
-    ~Parametrikut();
+    ~Parametrikut() {};
+
+    void buildGrid(std::vector<Param> params);
 };
 

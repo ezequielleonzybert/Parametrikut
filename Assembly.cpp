@@ -19,18 +19,49 @@ Assembly::Assembly()
 
 	width = 200;
 	depth = 200;
-	height = tabWidth + shelvesSpacing * levels + thickness * levels  + signHeight;	
+	height = tabWidth + shelvesSpacing * levels + thickness * levels  + signHeight;
+
+	/* addParams */ {
+		addParam("Thickness", thickness);
+		addParam("Shelves spacing", shelvesSpacing);
+		addParam("Tab width", tabWidth);
+		addParam("Slot length", slotLength);
+		addParam("Back slot length", backSlotLength);
+		addParam("Sign height", signHeight);
+
+		addParam("Levels", levels);
+		addParam("Front pins quantity", frontPinsQ);
+		addParam("Back pins quantity", backPinsQ);
+		addParam("Tabs", tabs);
+
+		addParam("Width", width);
+		addParam("Depth", depth);
+		addParam("Height", height);
+	}
 }
 
 void Assembly::build()
 {
 	parts.clear();
 
+	thickness = getParamValf("Thickness");
+	shelvesSpacing = getParamValf("Shelves spacing");
+	tabWidth = getParamValf("Tab width");
+	slotLength = getParamValf("Slot length");
+	backSlotLength = getParamValf("Back slot length");
+	signHeight = getParamValf("Sign height");
+	levels = getParamVali("Levels");
+	frontPinsQ = getParamVali("Front pins quantity");
+	backPinsQ = getParamVali("Back pins quantity");
+	tabs = getParamVali("Tabs");
+	width = getParamValf("Width");
+	depth = getParamValf("Depth");
+
 	slotThicknessLoose = thickness + .5;
 	slotThicknessMid = thickness;
 	slotThicknessTight = thickness - .5;
 	height = tabWidth + shelvesSpacing * levels + thickness * levels + signHeight;
-
+	
 	/* Back */ {
 
 		float w = width - tabWidth * 2 - slotThicknessMid * 2;
@@ -58,27 +89,28 @@ void Assembly::build()
 	}
 }
 
-Assembly::~Assembly(){}
+void Assembly::addParam(const char* name, int vali) {
+	params.push_back(Param(name, vali));
+}
 
-//TopoDS_Shape aBox = BRepPrimAPI_MakeBox(300.0, 300.0, 300.0).Shape();
-//gp_Trsf aTrsf;
-//aTrsf.SetTranslation(gp_Vec(-150.0, -150.0, -150.0));
-//BRepBuilderAPI_Transform brepTrsf(aBox, aTrsf);
-//TopoDS_Shape movedBox = brepTrsf.Shape();
-//Handle(AIS_Shape) aShape = new AIS_Shape(movedBox);
-//parts.push_back(aBox);
-//Handle(AIS_Shape) aShapeWire = new AIS_Shape(movedBox);
-//parts.push_back(aShapeWire);
-//TopoDS_Shape shape1 = BRepBuilderAPI_MakeFace(gp_Pln(), -50, 50, -100, 100);
-//parts.push_back(shape1);
-	//GC_MakeCircle c1 = GC_MakeCircle(gp_Pnt(0, 0, 0), gp_Dir(0, 0, 1), 100);
-	//TopoDS_Edge c1e = BRepBuilderAPI_MakeEdge(c1.Value());
-	//TopoDS_Wire c1w = BRepBuilderAPI_MakeWire(c1e);
-	//TopoDS_Shape c1s = BRepBuilderAPI_MakeFace(c1w);
-	//GC_MakeCircle c2 = GC_MakeCircle(gp_Pnt(0, 0, 0), gp_Dir(0, 0, 1), 50);
-	//TopoDS_Edge c2e = BRepBuilderAPI_MakeEdge(c2.Value());
-	//TopoDS_Wire c2w = BRepBuilderAPI_MakeWire(c2e);
-	//TopoDS_Shape c2s = BRepBuilderAPI_MakeFace(c2w);
-	//TopoDS_Shape cut = BRepAlgoAPI_Cut(c1s, c2s);
-	//TopoDS_Shape prism = BRepPrimAPI_MakePrism(cut, gp_Vec(0, 0, 200));
-	//parts.push_back(prism);
+void Assembly::addParam(const char* name, float valf) {
+	params.push_back(Param(name, valf));
+}
+
+int Assembly::getParamVali(const char* name) {
+	for (int i = 0; i < params.size(); i++) {
+		if (strcmp(params[i].name, name) == 0) {
+			return params[i].vali;
+		}
+	}
+	return -1;
+}
+
+float Assembly::getParamValf(const char* name) {
+	for (int i = 0; i < params.size(); i++) {
+		if (strcmp(params[i].name, name) == 0) {
+			return params[i].valf;
+		}
+	}
+	return -1;
+}

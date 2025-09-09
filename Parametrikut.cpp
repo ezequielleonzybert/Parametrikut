@@ -1,4 +1,8 @@
 #include "Parametrikut.h"
+#include <QRegularExpression>
+#include <QRegularExpressionValidator>
+#include <QLineEdit>
+#include <QLabel>
 
 Parametrikut::Parametrikut(QWidget *parent)
     : QMainWindow(parent)
@@ -6,13 +10,13 @@ Parametrikut::Parametrikut(QWidget *parent)
     assembly = new Assembly();
     assembly->build();
 
-    qApp->setStyleSheet("QLineEdit { width: 20px; }");
-
-    leThickness = new QLineEdit("3", leftWidget);
-    leLevels = new QLineEdit("3", leftWidget);
+    qApp->setStyleSheet("QLineEdit {width: 70px; border: 0px solid;}");
 
     centralWidget = new QWidget(this);
     setCentralWidget(centralWidget);
+
+    int margin = 10;
+    int spacing = 10;
 
     QHBoxLayout* centralLayout = new QHBoxLayout();
     centralLayout->setContentsMargins(0, 0, 0, 0);
@@ -20,47 +24,76 @@ Parametrikut::Parametrikut(QWidget *parent)
     centralWidget->setLayout(centralLayout);
 
     leftWidget = new QWidget(centralWidget);
-    QGridLayout* gridLayout = new QGridLayout(leftWidget);
-    gridLayout->setSpacing(10);
-    gridLayout->setContentsMargins(10, 10, 10, 10);
-    gridLayout->addWidget(new QLabel("Thickness:", leftWidget), 0, 0);
-    gridLayout->addWidget(leThickness, 0, 1);
-    gridLayout->addWidget(new QLabel("Levels:", leftWidget), 0, 2);
-    gridLayout->addWidget(leLevels, 0, 3);
 
-    connect(leThickness, &QLineEdit::editingFinished, [this]() {
-        float t = leThickness->text().toFloat();
-        assembly->thickness = t;
-        assembly->build();
-        viewer->displayAssembly(*assembly);
-        });
+    QVBoxLayout* leftLayout = new QVBoxLayout(leftWidget);
+	leftLayout->setContentsMargins(margin, margin, margin, margin);
+	leftLayout->setSpacing(spacing);
 
-    connect(leLevels, &QLineEdit::editingFinished, [this]() {
-        float t = leLevels->text().toFloat();
-        assembly->levels = t;
-        assembly->build();
-        viewer->displayAssembly(*assembly);
-        });
+    gridLayout = new QGridLayout(leftWidget);
+	gridLayout->setAlignment(Qt::AlignTop);
+    gridLayout->setSpacing(spacing);
+    gridLayout->setContentsMargins(0, 0, 0, 0);
+
+	buildGrid(assembly->params);
+
+	leftLayout->addLayout(gridLayout,1);
+
+    btnExport = new QPushButton("Export plan", leftWidget);
+    leftLayout->addWidget(btnExport, 0);
 
     centralLayout->addWidget(leftWidget, 0);
 
-    rightWidget = new QWidget(centralWidget);
-    QVBoxLayout* rightLayout = new QVBoxLayout();
-    rightLayout->setContentsMargins(0, 0, 0, 0);
-    rightLayout->setSpacing(0);
-    rightWidget->setLayout(rightLayout);
-
-    viewer = new OcctQWidgetViewer(rightWidget);
+    viewer = new OcctQWidgetViewer(centralWidget);
     viewer->displayAssembly(*assembly); //first display
-    rightLayout->addWidget(viewer, 1);
 
-    btnExport = new QPushButton("Export plan", rightWidget);
-    rightLayout->addWidget(btnExport, 0);
+    centralLayout->addWidget(viewer, 1);
 
-    centralLayout->addWidget(rightWidget, 1);
-
-    resize(600, 400);
+    resize(700, 500);
 }
 
-Parametrikut::~Parametrikut()
-{}
+void Parametrikut::buildGrid(std::vector<Param> params) {
+
+    QRegularExpression rxFloat(R"(^([0-9]+([.,][0-9]*)?|[.,][0-9]+)?$)");
+    QRegularExpressionValidator* validFloat = new QRegularExpressionValidator(rxFloat, this);
+    QRegularExpression rxInt("[0-9]+");
+    QRegularExpressionValidator* validInt = new QRegularExpressionValidator(rxInt, this);
+
+    for(int i = 0; i< params.size(); i++) {
+
+        Param param = params[i];
+		QLabel* label = new QLabel(param.name,leftWidget);
+        QLineEdit* lineEdit = new QLineEdit(leftWidget);
+
+        lineEdit->setAlignment(Qt::AlignRight);
+
+        bool isFloat;
+		param.vali == -1 ? isFloat = true : isFloat = false;
+
+        if (isFloat) {
+            lineEdit->setText(QString::number(param.valf));
+            lineEdit->setValidator(validFloat);
+        }
+        else {
+            lineEdit->setText(QString::number(param.vali));
+            lineEdit->setValidator(validInt);
+        }
+
+        gridLayout->addWidget(label, i, (i * 2)%2);
+        gridLayout->addWidget(lineEdit, i, (i * 2 + 1)%2);
+
+        connect(lineEdit, &QLineEdit::editingFinished, [=]() {
+			QString text = lineEdit->text();
+			text.replace(',', '.');
+            if (isFloat) {
+                float valf = text.toFloat();
+                assembly->params[i].valf = valf;
+            }
+            else {
+                int vali = text.toInt();
+				assembly->params[i].vali = vali;
+            }
+			assembly->build();
+            viewer->displayAssembly(*assembly);
+        });
+	}
+}
