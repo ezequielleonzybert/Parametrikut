@@ -29,6 +29,7 @@ void Assembly::build()
 	slotThicknessLoose = thickness + .5;
 	slotThicknessMid = thickness;
 	slotThicknessTight = thickness - .5;
+	height = tabWidth + shelvesSpacing * levels + thickness * levels + signHeight;
 
 	/* Back */ {
 

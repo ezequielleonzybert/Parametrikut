@@ -110,8 +110,6 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <QtRcc Include="Parametrikut.qrc" />
-    <QtUic Include="Parametrikut.ui" />
     <QtMoc Include="Parametrikut.h" />
     <ClCompile Include="Assembly.cpp" />
     <ClCompile Include="OcctQWidgetViewer.cpp" />

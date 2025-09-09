@@ -29,6 +29,7 @@ public:
     QWidget* rightWidget = nullptr;
     QPushButton* btnExport = nullptr;
     QLineEdit* leThickness = nullptr;
+    QLineEdit* leLevels = nullptr;
 
     Parametrikut(QWidget *parent = nullptr);
     ~Parametrikut();

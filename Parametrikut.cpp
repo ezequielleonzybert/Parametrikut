@@ -6,7 +6,10 @@ Parametrikut::Parametrikut(QWidget *parent)
     assembly = new Assembly();
     assembly->build();
 
+    qApp->setStyleSheet("QLineEdit { width: 20px; }");
+
     leThickness = new QLineEdit("3", leftWidget);
+    leLevels = new QLineEdit("3", leftWidget);
 
     centralWidget = new QWidget(this);
     setCentralWidget(centralWidget);
@@ -18,10 +21,12 @@ Parametrikut::Parametrikut(QWidget *parent)
 
     leftWidget = new QWidget(centralWidget);
     QGridLayout* gridLayout = new QGridLayout(leftWidget);
-    gridLayout->setSpacing(25);
-    gridLayout->setContentsMargins(25, 25, 25, 25);
-    gridLayout->addWidget(new QLabel("Thickness", leftWidget), 0, 0);
+    gridLayout->setSpacing(10);
+    gridLayout->setContentsMargins(10, 10, 10, 10);
+    gridLayout->addWidget(new QLabel("Thickness:", leftWidget), 0, 0);
     gridLayout->addWidget(leThickness, 0, 1);
+    gridLayout->addWidget(new QLabel("Levels:", leftWidget), 0, 2);
+    gridLayout->addWidget(leLevels, 0, 3);
 
     connect(leThickness, &QLineEdit::editingFinished, [this]() {
         float t = leThickness->text().toFloat();
@@ -30,7 +35,14 @@ Parametrikut::Parametrikut(QWidget *parent)
         viewer->displayAssembly(*assembly);
         });
 
-    centralLayout->addWidget(leftWidget, 1);
+    connect(leLevels, &QLineEdit::editingFinished, [this]() {
+        float t = leLevels->text().toFloat();
+        assembly->levels = t;
+        assembly->build();
+        viewer->displayAssembly(*assembly);
+        });
+
+    centralLayout->addWidget(leftWidget, 0);
 
     rightWidget = new QWidget(centralWidget);
     QVBoxLayout* rightLayout = new QVBoxLayout();
