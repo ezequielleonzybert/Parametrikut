@@ -5,13 +5,14 @@ and not as local variables.
 */
 
 #include "Assembly.h"
+#include "OcctUtils.h"
 
 void Assembly::cadCode()
 {
-	gp_Trsf tr;
-
 	BRepAlgoAPI_Cut cut;
 	BRepAlgoAPI_Fuse fuse;
+	cut.SetRunParallel(true);
+	fuse.SetRunParallel(true);
 
 	TopTools_ListOfShape argList;
 	TopTools_ListOfShape toolList;
@@ -35,10 +36,14 @@ void Assembly::cadCode()
 	TopoDS_Compound backTabs;
 	spacing = (sideHeight - slotLength * tabs) / (tabs - 1); //tab == 1 CRASH
 	for (int i = 0; i < tabs; i++) {
-		float x = inWidth / 2 + backTabW / 2;
-		float y = -backBaseH / 2 + slotLength + i * spacing + slotLength / 2 - slotLength / 3;
-		tr.SetTranslation(gp_Vec(x, y, 0));
-		argList.Append(backTab.Located(TopLoc_Location(tr)));
+		vec pos(
+			inWidth / 2 + backTabW / 2,
+			-backBaseH / 2 + slotLength + i * spacing + slotLength / 2 - slotLength / 3
+		);
+
+		TopoDS_Shape translated = translate(backTab, pos);
+		argList.Append(translated);
+		argList.Append(mirror( translated, vec(0,0,0), vec(1, 0, 0) ));
 	}
 
 	// backSlots
@@ -46,11 +51,11 @@ void Assembly::cadCode()
 	TopoDS_Compound backSlots;
 	spacing = (backBaseW - backPinsQ * backSlotLength) / (backPinsQ + 1);
 	for (int i = 0; i < levels; i++) {
-		float y = -backBaseH / 2 + i * shelvesSpacing + tabWidth + slotThicknessMid / 2 + thickness * i;
+		vec pos;
+		pos.y = -backBaseH / 2 + i * shelvesSpacing + tabWidth + slotThicknessMid / 2 + thickness * i;
 		for (int j = 0; j < backPinsQ; j++) {
-			float x = backBaseW / 2 - backSlotLength / 2 - spacing * (j + 1) - j * backSlotLength;
-			tr.SetTranslation(gp_Vec(x, y, 0));
-			toolList.Append(backSlot.Located(TopLoc_Location(tr)));
+			pos.x = backBaseW / 2 - backSlotLength / 2 - spacing * (j + 1) - j * backSlotLength;
+			toolList.Append(translate(backSlot, pos));
 		}
 	}
 
@@ -58,14 +63,13 @@ void Assembly::cadCode()
 	fuse.SetTools(argList);
 	fuse.Build();
 	fuse.SimplifyResult();
-	TopoDS_Shape backSketch = fuse.Shape();
+	TopoDS_Shape fused = fuse.Shape();
 	argList.Clear();
-	argList.Append(backSketch);
-
+	argList.Append(fused);
 	cut.SetArguments(argList);
 	cut.SetTools(toolList);
 	cut.Build();
-	backSketch = cut.Shape();
+	TopoDS_Shape backSketch = cut.Shape();
 
 	TopoDS_Shape back = BRepPrimAPI_MakePrism(backSketch, gp_Vec(0, 0, thickness));
 

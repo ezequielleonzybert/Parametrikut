@@ -13,6 +13,7 @@
 #include <BRepAlgoAPI_Cut.hxx>
 #include <BRepAlgoAPI_Fuse.hxx>
 #include <TopTools_ListOfShape.hxx>
+#include <ShapeUpgrade_UnifySameDomain.hxx>
 
 struct Param {
 	const char* name = nullptr;

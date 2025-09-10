@@ -120,6 +120,7 @@
   <ItemGroup>
     <ClInclude Include="Assembly.h" />
     <ClInclude Include="OcctQtTools.h" />
+    <ClInclude Include="OcctUtils.h" />
     <QtMoc Include="OcctQWidgetViewer.h" />
   </ItemGroup>
   <ItemGroup>

@@ -17,8 +17,6 @@ class Parametrikut : public QMainWindow
 
 public:
 
-
-
     Assembly* assembly = nullptr;
 
     OcctQWidgetViewer* viewer = nullptr;
