@@ -112,6 +112,7 @@
   <ItemGroup>
     <QtMoc Include="Parametrikut.h" />
     <ClCompile Include="Assembly.cpp" />
+    <ClCompile Include="cadcode.cpp" />
     <ClCompile Include="OcctQWidgetViewer.cpp" />
     <ClCompile Include="Parametrikut.cpp" />
     <ClCompile Include="main.cpp" />

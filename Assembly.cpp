@@ -17,25 +17,29 @@ Assembly::Assembly()
 	frontPinsQ = 1;
 	tabs = 2;
 
-	width = 200;
-	depth = 200;
+	inWidth = 200;
+	inDepth = 200;
+
+	width = inWidth + tabWidth*2 + thickness*2;
+	depth = inDepth + tabWidth*2;
 	height = tabWidth + shelvesSpacing * levels + thickness * levels  + signHeight;
+	sideHeight = height/2; //fruta
 
 	/* addParams */ {
 		addParam("Thickness", thickness);
+		addParam("Inner width", inWidth);
+		addParam("Inner depth", inDepth);
 		addParam("Shelves spacing", shelvesSpacing);
 		addParam("Tab width", tabWidth);
 		addParam("Slot length", slotLength);
 		addParam("Back slot length", backSlotLength);
 		addParam("Sign height", signHeight);
+		addParam("Side height", sideHeight);
 
 		addParam("Levels", levels);
 		addParam("Front pins quantity", frontPinsQ);
 		addParam("Back pins quantity", backPinsQ);
 		addParam("Tabs", tabs);
-
-		addParam("Width", width);
-		addParam("Depth", depth);
 	}
 }
 
@@ -53,39 +57,19 @@ void Assembly::build()
 	frontPinsQ = getParamVali("Front pins quantity");
 	backPinsQ = getParamVali("Back pins quantity");
 	tabs = getParamVali("Tabs");
-	width = getParamValf("Width");
-	depth = getParamValf("Depth");
+	inWidth = getParamValf("Inner width");
+	inDepth = getParamValf("Inner depth");
+	sideHeight = getParamValf("Side height");
 
 	slotThicknessLoose = thickness + .5;
 	slotThicknessMid = thickness;
-	slotThicknessTight = thickness - .5;
-	height = tabWidth + shelvesSpacing * levels + thickness * levels + signHeight;
+	slotThicknessTight = thickness - .5; 
+
+	width = inWidth + tabWidth * 2 + thickness * 2;
+	depth = inDepth + tabWidth * 2;
+	height = tabWidth*2 + shelvesSpacing * (levels-1) +thickness * levels + signHeight;
 	
-	/* Back */ {
-
-		float w = width - tabWidth * 2 - slotThicknessMid * 2;
-		float h = height;
-		TopoDS_Shape backBase = BRepBuilderAPI_MakeFace(gp_Pln(), -w / 2, w / 2, -h / 2, h / 2);
-
-		TopoDS_Shape backSlot = BRepBuilderAPI_MakeFace(gp_Pln(), -slotLength / 2, slotLength / 2, -slotThicknessMid / 2, slotThicknessMid / 2);
-		TopoDS_Compound backSlots;
-		BRep_Builder builder;
-		builder.MakeCompound(backSlots);
-		float spacing = (w - backPinsQ * backSlotLength) / (backPinsQ + 1);
-		gp_Trsf transform;
-		for (int i = 0; i < levels; i++) {
-			float y = -h / 2 + i * shelvesSpacing + tabWidth + slotThicknessMid / 2 + thickness * i;
-			for (int j = 0; j < backPinsQ; j++) {
-				float x = w / 2 - backSlotLength / 2 - spacing * (j + 1) - j * backSlotLength;
-				transform.SetTranslation(gp_Vec(x, y, 0));
-				builder.Add(backSlots, backSlot.Located(TopLoc_Location(transform)));
-			}
-		}
-		TopoDS_Shape backSketch = BRepAlgoAPI_Cut(backBase, backSlots);
-		TopoDS_Shape back = BRepPrimAPI_MakePrism(backSketch, gp_Vec(0, 0, thickness));
-
-		parts.push_back(back);
-	}
+	cadCode();
 }
 
 void Assembly::addParam(const char* name, int vali) {

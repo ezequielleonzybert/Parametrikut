@@ -1,6 +1,5 @@
 #pragma once
 #include <AIS_Shape.hxx>
-#include <BRep_Builder.hxx>
 #include <BRepPrimAPI_MakeBox.hxx>
 #include <BRepPrimAPI_MakePrism.hxx>
 #include <BRepBuilderAPI_MakeFace.hxx>
@@ -12,6 +11,8 @@
 #include <gp_Pnt.hxx>
 #include <gp_Dir.hxx>
 #include <BRepAlgoAPI_Cut.hxx>
+#include <BRepAlgoAPI_Fuse.hxx>
+#include <TopTools_ListOfShape.hxx>
 
 struct Param {
 	const char* name = nullptr;
@@ -29,9 +30,6 @@ struct Assembly{
 	std::vector<Param> params;
 
 	float thickness;
-	float width;
-	float depth;
-	float height;
 	float tabWidth;
 	float slotThicknessLoose;
 	float slotThicknessMid;
@@ -40,11 +38,18 @@ struct Assembly{
 	float backSlotLength;
 	float shelvesSpacing;
 	float signHeight;
+	float sideHeight;
 
 	int levels;
 	int backPinsQ;
 	int frontPinsQ;
 	int tabs;
+
+	float inWidth;
+	float inDepth;
+	float width;
+	float depth;
+	float height;
 		
 	Assembly();
 	~Assembly(){};
@@ -56,5 +61,7 @@ struct Assembly{
 
 	int getParamVali(const char* name);
 	float getParamValf(const char* name);
+
+	void cadCode();
 };
 
