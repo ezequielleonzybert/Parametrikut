@@ -31,7 +31,7 @@ struct vec {
 TopoDS_Shape translate(TopoDS_Shape shape, vec v) {
 	gp_Trsf tr;
 	tr.SetTranslation(gp_Vec(v.x,v.y,v.z));
-	BRepBuilderAPI_Transform result(shape, tr);
+	BRepBuilderAPI_Transform result(shape, tr, true);
 	return result.Shape();
 }
 
@@ -39,8 +39,8 @@ TopoDS_Shape mirror(TopoDS_Shape shape, vec dir, vec pnt = vec::vec(0,0,0) ) {
 	gp_Trsf tr;
 	gp_Ax2 ax(gp_Pnt(pnt.x, pnt.y, pnt.z), gp_Dir(dir.x, dir.y, dir.z));
 	tr.SetMirror(ax);
-	BRepBuilderAPI_Transform result(shape, tr);
-	return result.Shape();
+	BRepBuilderAPI_Transform result(shape, tr, true);
+	return result.Shape().Reversed();
 }
 
 TopoDS_Shape OuterWire(std::vector<TopoDS_Wire> wires) {
