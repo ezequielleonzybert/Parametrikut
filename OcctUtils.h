@@ -5,6 +5,11 @@
 #include <BRepTools_WireExplorer.hxx>
 #include <BRepBuilderAPI_MakeEdge2d.hxx>
 #include <BRepBuilderAPI_Sewing.hxx>
+#include <BRepPrimAPI_MakePrism.hxx>
+#include <TopTools_ListOfShape.hxx>
+
+TopTools_ListOfShape args;
+TopTools_ListOfShape tools;
 
 enum class Align{
 	cc,
@@ -43,28 +48,6 @@ TopoDS_Shape mirror(TopoDS_Shape shape, vec dir, vec pnt = vec::vec(0,0,0) ) {
 	return result.Shape().Reversed();
 }
 
-TopoDS_Shape OuterWire(std::vector<TopoDS_Wire> wires) {
-
-	std::vector<TopoDS_Edge> edges;
-
-	for (TopoDS_Wire w : wires) {
-		BRepTools_WireExplorer wireExp;
-		for (wireExp.Init(w); wireExp.More(); wireExp.Next()) {
-			edges.push_back(wireExp.Current());
-		}
-	}
-	
-	BRepBuilderAPI_Sewing sewing;
-
-	for (TopoDS_Edge e : edges) {
-		sewing.Add(e);
-	}
-	sewing.Perform();
-	sewing.Dump();
-
-	return sewing.SewedShape();
-}
-
 TopoDS_Shape fuse(TopTools_ListOfShape* args) {
 
 	BRepAlgoAPI_Fuse fuse;
@@ -97,6 +80,10 @@ TopoDS_Shape fusecut(TopTools_ListOfShape args, TopTools_ListOfShape tools) {
 	cut.Build();
 
 	return TopoDS_Shape(cut.Shape());
+}
+
+TopoDS_Shape extrude(TopoDS_Shape face, float thickness) {
+	return BRepPrimAPI_MakePrism(face, gp_Vec(0,0,thickness));
 }
 
 class Rectangle {
