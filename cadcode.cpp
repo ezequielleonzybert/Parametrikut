@@ -9,10 +9,12 @@ and not as local variables.
 
 void Assembly::cadCode()
 {
+	bool doFillet = true;
+	std::vector<vec> filletVertices;
 
 	// backBase
 	Rectangle backBase(inWidth + (thickness-slotThicknessLoose), height);
-	args.Append(backBase);
+	args.Append(fillet(backBase, thickness));
 
 	// backTabs
 	Rectangle backTabBase(slotThicknessLoose + tabWidth, slotLength, Align::hh);
@@ -42,7 +44,8 @@ void Assembly::cadCode()
 		}
 	}
 
-	TopoDS_Shape backFace = fusecut(args, tools);
+	TopoDS_Shape backFace = fusecut(&args, &tools);
+	TopoDS_Shape back = extrude(backFace, thickness);
 
-	parts.push_back(extrude(backFace,thickness));
+	parts.push_back(back);
 }

@@ -15,8 +15,6 @@
 #include <BRepAlgoAPI_Fuse.hxx>
 #include <TopTools_ListOfShape.hxx>
 #include <ShapeUpgrade_UnifySameDomain.hxx>
-#include <BRepFilletAPI_MakeFillet.hxx>
-#include <TopExp_Explorer.hxx>
 
 struct Param {
 	const char* name = nullptr;
