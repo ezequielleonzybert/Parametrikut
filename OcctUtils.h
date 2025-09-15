@@ -15,9 +15,17 @@
 #include <TopoDS.hxx>
 #include <TopoDS_Solid.hxx>
 #include <ShapeUpgrade_UnifySameDomain.hxx>
+#include <BRep_Tool.hxx>
+#include <gp_Pnt.hxx>
 
 TopTools_ListOfShape args;
 TopTools_ListOfShape tools;
+
+enum class Axis {
+	x,
+	y,
+	z
+};
 
 enum class Align{
 	cc,
@@ -40,6 +48,10 @@ struct vec {
 	vec(float x, float y, float z = 0) : 
 		x(x), y(y), z(z) {}
 };
+
+bool equal(float a, float b, float tolerance = 1e-6f) {
+	return std::fabs(a - b) < tolerance;
+}
 
 TopoDS_Shape translate(TopoDS_Shape shape, vec v) {
 	gp_Trsf tr;
@@ -97,61 +109,88 @@ TopoDS_Shape extrude(TopoDS_Shape face, float thickness) {
 	return BRepPrimAPI_MakePrism(face, gp_Vec(0,0,thickness));
 }
 
-TopoDS_Shape fillet(TopoDS_Face face, float r) {
+std::vector<TopoDS_Vertex> vertices(const TopoDS_Shape& shape) {
+	TopExp_Explorer exp(shape, TopAbs_FACE);
+	TopoDS_Face face(TopoDS::Face(exp.Current()));
 	BRepFilletAPI_MakeFillet2d makeFillet(face);
-	TopExp_Explorer exp(face, TopAbs_VERTEX);
 
-	// Use TShape pointer as hash key
-	std::unordered_set<const void*> unique_vertices;
+	TopTools_IndexedMapOfShape vertexMap;
+	TopExp::MapShapes(face, TopAbs_VERTEX, vertexMap);
 
+	std::vector<TopoDS_Vertex> uniqueVertices;
+	std::unordered_set<const void*> seen;
 
-	while (exp.More()) {
-		TopoDS_Vertex v = TopoDS::Vertex(exp.Current());
-		const void* tshape_ptr = v.TShape().get(); // get() gives raw pointer
+	for (int i = 1; i <= vertexMap.Extent(); ++i) {
+		TopoDS_Vertex v = TopoDS::Vertex(vertexMap(i));
+		const void* key = v.TShape().get();
 
-		if (unique_vertices.insert(tshape_ptr).second) {
-			// Only add if not already present
-			makeFillet.AddFillet(v, r);
+		if (seen.insert(key).second) {
+			uniqueVertices.push_back(v);
 		}
-		exp.Next();
+	}
+
+	return uniqueVertices;
+}
+
+TopoDS_Shape fillet(TopoDS_Shape shape, std::vector<gp_Pnt> locs, float r) {
+	TopExp_Explorer exp(shape, TopAbs_FACE);
+	TopoDS_Face face(TopoDS::Face(exp.Current()));
+	BRepFilletAPI_MakeFillet2d makeFillet(face);
+
+	const std::vector<TopoDS_Vertex>& vv = vertices(face);
+
+	for (int i = 0; i < vv.size(); i++) {
+		gp_Pnt p(BRep_Tool::Pnt(vv[i]));
+		for (int j = 0; j < locs.size(); j++) {
+			if (p.IsEqual(locs[j], 1e-6f)) {
+				makeFillet.AddFillet(vv[i], r);
+				break;
+			}
+		}
 	}
 	return makeFillet.Shape();
 }
 
-std::vector<TopoDS_Vertex> vertices(TopoDS_Face face) {
-	TopTools_IndexedMapOfShape vertexMap;
-	TopExp::MapShapes(face, TopAbs_VERTEX, vertexMap);
+TopoDS_Shape fillet(TopoDS_Shape shape, std::vector<TopoDS_Vertex> vv, float r) {
+	TopExp_Explorer exp(shape, TopAbs_FACE);
+	TopoDS_Face face(TopoDS::Face(exp.Current()));
+	BRepFilletAPI_MakeFillet2d makeFillet(face);
 
-	std::vector<TopoDS_Vertex> vertices;
-	for (int i = 1; i <= vertexMap.Extent(); ++i) {
-		vertices.push_back(TopoDS::Vertex(vertexMap(i)));
+	for (TopoDS_Vertex v : vv) {
+		makeFillet.AddFillet(v, r);
 	}
-
-	return vertices;
+	return makeFillet.Shape();
 }
 
+std::vector<std::vector<TopoDS_Vertex>> groupBy(std::vector<TopoDS_Vertex> vv, Axis axis) {
 
-TopoDS_Shape FilletFace(const Standard_Real a,
-	const Standard_Real  b,
-	const Standard_Real c,
-	const Standard_Real  r)
+	std::vector<std::vector<TopoDS_Vertex>> outList;
 
-{
-	TopoDS_Solid Box = BRepPrimAPI_MakeBox(a, b, c);
-	TopExp_Explorer  ex1(Box, TopAbs_FACE);
+	std::sort(vv.begin(), vv.end(), [](const TopoDS_Vertex& a, const TopoDS_Vertex& b) {
+		gp_Pnt ap = BRep_Tool::Pnt(a);
+		gp_Pnt bp = BRep_Tool::Pnt(b);
+		return ap.X() < bp.X();
+	});
 
-	const  TopoDS_Face& F = TopoDS::Face(ex1.Current());
-	BRepFilletAPI_MakeFillet2d MF(F);
-	TopExp_Explorer ex2(F, TopAbs_VERTEX);
-	int i = 0;
-	while (ex2.More())
-	{
-		i++;
-		MF.AddFillet(TopoDS::Vertex(ex2.Current()), r);
-		ex2.Next();
-		ex2.Next();
+	std::vector<TopoDS_Vertex> group;
+	for (int i = 0; i < vv.size()-1; i++) {
+		gp_Pnt p1 = BRep_Tool::Pnt(vv[i]);
+		gp_Pnt p2 = BRep_Tool::Pnt(vv[i + 1]);
+
+		if (group.empty())
+			group.push_back(vv[i]);
+
+		if (equal(p1.X(), p2.X())) {
+			group.push_back(vv[i+1]);
+			if(i+2 == vv.size())
+				outList.push_back(group);
+			continue;
+		}
+		outList.push_back(group);
+		group.clear();
 	}
-	return MF.Shape();
+
+	return outList;
 }
 
 class Rectangle {

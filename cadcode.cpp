@@ -9,12 +9,18 @@ and not as local variables.
 
 void Assembly::cadCode()
 {
-	bool doFillet = true;
-	std::vector<vec> filletVertices;
+	std::vector<gp_Pnt> fillet1Locations;
+	std::vector<gp_Pnt> fillet2Locations;
 
 	// backBase
 	Rectangle backBase(inWidth + (thickness-slotThicknessLoose), height);
-	args.Append(fillet(backBase, thickness));
+	args.Append(backBase);
+	{
+		float x = backBase.w / 2;
+		float y = backBase.h / 2;
+		fillet2Locations.push_back(gp_Pnt(-x, -y, 0));
+		fillet2Locations.push_back(gp_Pnt(x, -y, 0));
+	}
 
 	// backTabs
 	Rectangle backTabBase(slotThicknessLoose + tabWidth, slotLength, Align::hh);
@@ -45,6 +51,12 @@ void Assembly::cadCode()
 	}
 
 	TopoDS_Shape backFace = fusecut(&args, &tools);
+
+	// fillet
+	//backFace = fillet(backFace, fillet2Locations, thickness);
+
+	backFace = fillet(backFace, groupBy(vertices(backFace), Axis::x)[0], thickness);
+
 	TopoDS_Shape back = extrude(backFace, thickness);
 
 	parts.push_back(back);
