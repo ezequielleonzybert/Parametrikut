@@ -15,8 +15,8 @@ Parametrikut::Parametrikut(QWidget *parent)
     centralWidget = new QWidget(this);
     setCentralWidget(centralWidget);
 
-    int margin = 20;
-    int spacing = 20;
+    int margin = 10;
+    int spacing = 10;
 
     QHBoxLayout* centralLayout = new QHBoxLayout();
     centralLayout->setContentsMargins(0, 0, 0, 0);

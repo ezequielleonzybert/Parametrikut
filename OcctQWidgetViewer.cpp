@@ -35,7 +35,7 @@ OcctQWidgetViewer::OcctQWidgetViewer(QWidget* theParent)
     Handle(Aspect_DisplayConnection) aDisp = new Aspect_DisplayConnection();
     Handle(OpenGl_GraphicDriver)     aDriver = new OpenGl_GraphicDriver(aDisp, false);
 
-	//this->SetLockOrbitZUp(true); //turn table orbit style
+	this->SetLockOrbitZUp(true); //turn table orbit style
 
     // create viewer
     myViewer = new V3d_Viewer(aDriver);

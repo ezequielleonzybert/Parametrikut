@@ -10,7 +10,7 @@ Assembly::Assembly()
 	slotLength = 30;
 	backSlotLength = slotLength * 1.5;
 	shelvesSpacing = 100;
-	signHeight = 70;
+	signHeight = 50;
 
 	levels = 3;
 	backPinsQ = 2;
@@ -18,12 +18,12 @@ Assembly::Assembly()
 	tabs = 2;
 
 	inWidth = 200;
-	inDepth = 200;
+	inDepth = 100;
 
 	width = inWidth + tabWidth*2 + thickness*2;
 	depth = inDepth + tabWidth*2;
 	height = tabWidth + shelvesSpacing * levels + thickness * levels  + signHeight;
-	sideHeight = height/2; //fruta
+	sideHeight = height - signHeight;
 
 	/* addParams */ {
 		addParam("Thickness", thickness);
@@ -34,7 +34,7 @@ Assembly::Assembly()
 		addParam("Slot length", slotLength);
 		addParam("Back slot length", backSlotLength);
 		addParam("Sign height", signHeight);
-		addParam("Side height", sideHeight);
+		//addParam("Side height", sideHeight);
 
 		addParam("Levels", levels);
 		addParam("Front pins quantity", frontPinsQ);
@@ -59,7 +59,7 @@ void Assembly::build()
 	tabs = getParamVali("Tabs");
 	inWidth = getParamValf("Inner width");
 	inDepth = getParamValf("Inner depth");
-	sideHeight = getParamValf("Side height");
+	//sideHeight = getParamValf("Side height");
 
 	slotThicknessLoose = thickness + .5;
 	slotThicknessMid = thickness;
@@ -68,7 +68,8 @@ void Assembly::build()
 	width = inWidth + tabWidth * 2 + thickness * 2;
 	depth = inDepth + tabWidth * 2;
 	height = tabWidth*2 + shelvesSpacing * (levels-1) +thickness * levels + signHeight;
-	
+	sideHeight = height - signHeight;
+
 	cadCode();
 }
 
