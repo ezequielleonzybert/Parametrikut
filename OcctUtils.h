@@ -166,10 +166,23 @@ std::vector<std::vector<TopoDS_Vertex>> groupBy(std::vector<TopoDS_Vertex> vv, A
 
 	std::vector<std::vector<TopoDS_Vertex>> outList;
 
-	std::sort(vv.begin(), vv.end(), [](const TopoDS_Vertex& a, const TopoDS_Vertex& b) {
+	std::sort(vv.begin(), vv.end(), [axis](const TopoDS_Vertex& a, const TopoDS_Vertex& b) {
 		gp_Pnt ap = BRep_Tool::Pnt(a);
 		gp_Pnt bp = BRep_Tool::Pnt(b);
-		return ap.X() < bp.X();
+		switch (axis)
+		{
+		case Axis::x:
+			return ap.X() < bp.X();
+			break;
+		case Axis::y:
+			return ap.Y() < bp.Y();
+			break;
+		case Axis::z:
+			return ap.Z() < bp.Z();
+			break;
+		default:
+			break;
+		}
 	});
 
 	std::vector<TopoDS_Vertex> group;

@@ -53,9 +53,15 @@ void Assembly::cadCode()
 	TopoDS_Shape backFace = fusecut(&args, &tools);
 
 	// fillet
-	//backFace = fillet(backFace, fillet2Locations, thickness);
-
-	backFace = fillet(backFace, groupBy(vertices(backFace), Axis::x)[0], thickness);
+	std::vector<TopoDS_Vertex> vv1;
+	std::vector<TopoDS_Vertex> vv2;
+	auto gx = groupBy(vertices(backFace),Axis::x);
+	vv1.insert(vv1.end(), gx[1].begin(), gx[1].end());
+	vv1.insert(vv1.end(), gx[gx.size() - 2].begin(), gx[gx.size() - 2].end());
+	vv2.insert(vv2.end(), gx[0].begin(), gx[0].end());
+	vv2.insert(vv2.end(), gx[gx.size()-1].begin(), gx[gx.size()-1].end());
+	backFace = fillet(backFace, vv1, 1);
+	backFace = fillet(backFace, vv2, thickness);
 
 	TopoDS_Shape back = extrude(backFace, thickness);
 
