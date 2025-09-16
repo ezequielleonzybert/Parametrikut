@@ -55,13 +55,20 @@ void Assembly::cadCode()
 	// fillet
 	std::vector<TopoDS_Vertex> vv1;
 	std::vector<TopoDS_Vertex> vv2;
-	auto gx = groupBy(vertices(backFace),Axis::x);
+	std::vector<TopoDS_Vertex> vv30;
+
+	auto gx = groupBy(vertices(backFace), Axis::x);
+	auto gy = groupBy(vertices(backFace), Axis::y);
 	vv1.insert(vv1.end(), gx[1].begin(), gx[1].end());
 	vv1.insert(vv1.end(), gx[gx.size() - 2].begin(), gx[gx.size() - 2].end());
 	vv2.insert(vv2.end(), gx[0].begin(), gx[0].end());
 	vv2.insert(vv2.end(), gx[gx.size()-1].begin(), gx[gx.size()-1].end());
+	vv2.insert(vv2.end(), gy[0].begin(), gy[0].end());
+	vv30.insert(vv30.end(), gy[gy.size() - 1].begin(), gy[gy.size() - 1].end());
+
 	backFace = fillet(backFace, vv1, 1);
 	backFace = fillet(backFace, vv2, thickness);
+	backFace = fillet(backFace, vv30, 30);
 
 	TopoDS_Shape back = extrude(backFace, thickness);
 

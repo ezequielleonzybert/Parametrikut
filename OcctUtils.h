@@ -193,12 +193,36 @@ std::vector<std::vector<TopoDS_Vertex>> groupBy(std::vector<TopoDS_Vertex> vv, A
 		if (group.empty())
 			group.push_back(vv[i]);
 
-		if (equal(p1.X(), p2.X())) {
-			group.push_back(vv[i+1]);
-			if(i+2 == vv.size())
-				outList.push_back(group);
-			continue;
+		switch (axis)
+		{
+		case Axis::x:
+			if (equal(p1.X(), p2.X())) {
+				group.push_back(vv[i + 1]);
+				if (i + 2 == vv.size())
+					outList.push_back(group);
+				continue;
+			}
+			break;
+		case Axis::y:
+			if (equal(p1.Y(), p2.Y())) {
+				group.push_back(vv[i + 1]);
+				if (i + 2 == vv.size())
+					outList.push_back(group);
+				continue;
+			}
+			break;
+		case Axis::z:
+			if (equal(p1.Z(), p2.Z())) {
+				group.push_back(vv[i + 1]);
+				if (i + 2 == vv.size())
+					outList.push_back(group);
+				continue;
+			}
+			break;
+		default:
+			break;
 		}
+		
 		outList.push_back(group);
 		group.clear();
 	}
