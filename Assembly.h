@@ -1,20 +1,6 @@
 #pragma once
-#include <qdebug.h>
-#include <AIS_Shape.hxx>
-#include <BRepPrimAPI_MakeBox.hxx>
-#include <BRepPrimAPI_MakePrism.hxx>
-#include <BRepBuilderAPI_MakeFace.hxx>
-#include <BRepBuilderAPI_MakeEdge.hxx>
-#include <BRepBuilderAPI_MakeWire.hxx>
-#include <BRepBuilderAPI_Transform.hxx>
-#include <GC_MakeCircle.hxx>	
-#include <gp_Pln.hxx>
-#include <gp_Pnt.hxx>
-#include <gp_Dir.hxx>
-#include <BRepAlgoAPI_Cut.hxx>
-#include <BRepAlgoAPI_Fuse.hxx>
-#include <TopTools_ListOfShape.hxx>
-#include <ShapeUpgrade_UnifySameDomain.hxx>
+
+#include "OcctUtils.h"
 
 struct Param {
 	const char* name = nullptr;
@@ -28,7 +14,7 @@ struct Param {
 
 struct Assembly{
 
-	std::vector<TopoDS_Shape> parts;
+	std::vector<Part> parts;
 	std::vector<Param> params;
 
 	float thickness;
@@ -52,6 +38,8 @@ struct Assembly{
 	float width;
 	float depth;
 	float height;
+
+	float rotation;
 		
 	Assembly();
 	~Assembly(){};

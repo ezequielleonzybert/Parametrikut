@@ -1,8 +1,11 @@
+#pragma once
+
 #include <TopoDS_Shape.hxx>
 #include <BRepAlgoAPI_Cut.hxx>
 #include <BRepAlgoAPI_Fuse.hxx>
 #include <BRepBuilderAPI_Transform.hxx>
 #include <BRepTools_WireExplorer.hxx>
+#include <BRepBuilderAPI_MakeFace.hxx>
 #include <BRepBuilderAPI_MakeEdge2d.hxx>
 #include <BRepBuilderAPI_MakeVertex.hxx>
 #include <BRepBuilderAPI_Sewing.hxx>
@@ -17,9 +20,14 @@
 #include <ShapeUpgrade_UnifySameDomain.hxx>
 #include <BRep_Tool.hxx>
 #include <gp_Pnt.hxx>
+#include <gp_Pln.hxx>
+#include <gp_Quaternion.hxx>
+#include <unordered_set>
 
-TopTools_ListOfShape args;
-TopTools_ListOfShape tools;
+#include <qDebug>
+
+inline TopTools_ListOfShape args;
+inline TopTools_ListOfShape tools;
 
 enum class Axis {
 	x,
@@ -47,20 +55,160 @@ struct vec {
 		x(0), y(0), z(0) {}
 	vec(float x, float y, float z = 0) : 
 		x(x), y(y), z(z) {}
+	void set(float x, float y, float z = 0) {
+		this->x = x;
+		this->y = y;
+		this->z = z;
+	}
 };
 
-bool equal(float a, float b, float tolerance = 1e-6f) {
+class Rectangle {
+
+public:
+	float w, h, x, y;
+
+private:
+
+	Align align;
+	TopoDS_Shape shape;
+	TopoDS_Face face;
+
+	void RectangleAlgo() {
+
+		float xo = x;
+		float yo = y;
+
+		switch (align) {
+		case Align::cc:
+			xo -= w / 2;
+			yo -= h / 2;
+			break;
+		case Align::cl:
+			xo -= w / 2;
+			yo -= h;
+			break;
+		case Align::lc:
+			xo -= w;
+			yo -= h / 2;
+			break;
+		case Align::ch:
+			xo -= w / 2;
+			break;
+		case Align::hc:
+			yo -= h / 2;
+			break;
+		case Align::ll:
+			xo -= w;
+			yo -= h;
+			break;
+		case Align::lh:
+			xo -= w;
+			break;
+		case Align::hl:
+			yo -= h;
+			break;
+		case Align::hh:
+			break;
+		}
+
+		shape = BRepBuilderAPI_MakeFace(gp_Pln(), xo, xo + w, yo, yo + h).Shape();
+		face = BRepBuilderAPI_MakeFace(gp_Pln(), xo, xo + w, yo, yo + h).Face();
+	}
+
+public:
+
+	Rectangle(float w, float h, float x = 0, float y = 0, Align align = Align::cc) :
+		w(w), h(h), x(x), y(y), align(align)
+	{
+		RectangleAlgo();
+	}
+	Rectangle(float w, float h, Align align) :
+		w(w), h(h), x(0), y(0), align(align)
+	{
+		RectangleAlgo();
+	}
+
+	operator TopoDS_Shape() const {
+		return TopoDS_Shape(shape);
+	}
+	operator TopoDS_Face() const {
+		return TopoDS_Face(face);
+	}
+
+};
+
+class Part {
+
+private:
+	TopoDS_Shape shape;
+	gp_Trsf transformation;
+
+public:
+	std::vector<gp_Trsf> joints;
+
+	Part() {}
+
+	Part(TopoDS_Shape s) : shape(s) {}
+
+	void translate(float x = 0, float y = 0, float z = 0) {
+		gp_Trsf tr;
+		gp_Vec pos(x, y, z);
+		tr.SetTranslationPart(pos);
+		shape = shape.Located(tr);
+		for (gp_Trsf& t : joints) {
+			t.SetTranslation(pos);
+		}
+	}
+
+	void rotate(float x = 0, float y = 0, float z = 0) {
+		gp_Trsf tr;
+		float a = x * M_PI / 180.0f;
+		float b = y * M_PI / 180.0f;
+		float c = z * M_PI / 180.0f;
+		gp_Quaternion q;
+		q.SetEulerAngles(gp_Extrinsic_XYZ, a, b, c);
+		tr.SetRotationPart(q);
+		transformation = tr;
+		shape = shape.Located(TopLoc_Location(transformation));
+	}
+
+	TopoDS_Shape Shape() {
+		return shape;
+	}
+
+	void addJoint(float x, float y, float z = 0, float xr = 0, float yr = 0, float zr = 0) {
+		gp_Trsf tr;
+
+		float a = xr * M_PI / 180.0f;
+		float b = yr * M_PI / 180.0f;
+		float c = zr * M_PI / 180.0f;
+		gp_Quaternion q;
+		q.SetEulerAngles(gp_Extrinsic_XYZ, a, b, c);
+		tr.SetRotationPart(q);
+
+		tr.SetTranslationPart(gp_Vec(x, y, z));
+
+		joints.push_back(transformation * tr);
+	}
+
+	operator TopoDS_Shape() const {
+		return TopoDS_Shape(shape);
+	}
+
+};
+
+inline bool equal(float a, float b, float tolerance = 1e-6f) {
 	return std::fabs(a - b) < tolerance;
 }
 
-TopoDS_Shape translate(TopoDS_Shape shape, vec v) {
+inline TopoDS_Shape translate(TopoDS_Shape shape, vec v) {
 	gp_Trsf tr;
 	tr.SetTranslation(gp_Vec(v.x,v.y,v.z));
 	BRepBuilderAPI_Transform result(shape, tr, true);
 	return result.Shape();
 }
 
-TopoDS_Shape mirror(TopoDS_Shape shape, vec dir, vec pnt = vec::vec(0,0,0) ) {
+inline TopoDS_Shape mirror(TopoDS_Shape shape, vec dir, vec pnt = vec::vec(0,0,0) ) {
 	gp_Trsf tr;
 	gp_Ax2 ax(gp_Pnt(pnt.x, pnt.y, pnt.z), gp_Dir(dir.x, dir.y, dir.z));
 	tr.SetMirror(ax);
@@ -68,7 +216,7 @@ TopoDS_Shape mirror(TopoDS_Shape shape, vec dir, vec pnt = vec::vec(0,0,0) ) {
 	return result.Shape().Reversed();
 }
 
-TopoDS_Shape fuse(TopTools_ListOfShape* args) {
+inline TopoDS_Shape fuse(TopTools_ListOfShape* args) {
 
 	BRepAlgoAPI_Fuse fuse;
 	fuse.SetRunParallel(true);
@@ -81,7 +229,7 @@ TopoDS_Shape fuse(TopTools_ListOfShape* args) {
 	return TopoDS_Shape(fuse.Shape());
 }
 
-TopoDS_Shape fusecut(TopTools_ListOfShape *args, TopTools_ListOfShape *tools) {
+inline TopoDS_Shape fusecut(TopTools_ListOfShape *args, TopTools_ListOfShape *tools) {
 
 	BRepAlgoAPI_Fuse fuse;
 	BRepAlgoAPI_Cut cut;
@@ -105,11 +253,12 @@ TopoDS_Shape fusecut(TopTools_ListOfShape *args, TopTools_ListOfShape *tools) {
 	return TopoDS_Shape(cut.Shape());
 }
 
-TopoDS_Shape extrude(TopoDS_Shape face, float thickness) {
-	return BRepPrimAPI_MakePrism(face, gp_Vec(0,0,thickness));
+inline Part extrude(TopoDS_Shape face, float thickness) {
+	TopoDS_Shape p = BRepPrimAPI_MakePrism(face, gp_Vec(0,0,thickness));
+	return Part(p);
 }
 
-std::vector<TopoDS_Vertex> vertices(const TopoDS_Shape& shape) {
+inline std::vector<TopoDS_Vertex> vertices(const TopoDS_Shape& shape) {
 	TopExp_Explorer exp(shape, TopAbs_FACE);
 	TopoDS_Face face(TopoDS::Face(exp.Current()));
 	BRepFilletAPI_MakeFillet2d makeFillet(face);
@@ -132,7 +281,7 @@ std::vector<TopoDS_Vertex> vertices(const TopoDS_Shape& shape) {
 	return uniqueVertices;
 }
 
-TopoDS_Shape fillet(TopoDS_Shape shape, std::vector<gp_Pnt> locs, float r) {
+inline TopoDS_Shape fillet(TopoDS_Shape shape, std::vector<gp_Pnt> locs, float r) {
 	TopExp_Explorer exp(shape, TopAbs_FACE);
 	TopoDS_Face face(TopoDS::Face(exp.Current()));
 	BRepFilletAPI_MakeFillet2d makeFillet(face);
@@ -151,7 +300,7 @@ TopoDS_Shape fillet(TopoDS_Shape shape, std::vector<gp_Pnt> locs, float r) {
 	return makeFillet.Shape();
 }
 
-TopoDS_Shape fillet(TopoDS_Shape shape, std::vector<TopoDS_Vertex> vv, float r) {
+inline TopoDS_Shape fillet(TopoDS_Shape shape, std::vector<TopoDS_Vertex> vv, float r) {
 	TopExp_Explorer exp(shape, TopAbs_FACE);
 	TopoDS_Face face(TopoDS::Face(exp.Current()));
 	BRepFilletAPI_MakeFillet2d makeFillet(face);
@@ -162,7 +311,7 @@ TopoDS_Shape fillet(TopoDS_Shape shape, std::vector<TopoDS_Vertex> vv, float r) 
 	return makeFillet.Shape();
 }
 
-std::vector<std::vector<TopoDS_Vertex>> groupBy(std::vector<TopoDS_Vertex> vv, Axis axis) {
+inline std::vector<std::vector<TopoDS_Vertex>> groupBy(std::vector<TopoDS_Vertex> vv, Axis axis) {
 
 	std::vector<std::vector<TopoDS_Vertex>> outList;
 
@@ -229,78 +378,3 @@ std::vector<std::vector<TopoDS_Vertex>> groupBy(std::vector<TopoDS_Vertex> vv, A
 
 	return outList;
 }
-
-class Rectangle {
-
-public:
-	float w, h, x, y;
-
-private:
-
-	Align align;
-	TopoDS_Shape shape;
-	TopoDS_Face face;
-
-	void RectangleAlgo() {
-
-		float xo = x;
-		float yo = y;
-
-		switch (align) {
-		case Align::cc: 
-			xo -= w / 2; 
-			yo -= h / 2; 
-		break;
-		case Align::cl:
-			xo -= w / 2;
-			yo -= h;
-			break;
-		case Align::lc:
-			xo -= w;
-			yo -= h / 2;
-			break;
-		case Align::ch:
-			xo -= w / 2;
-			break;
-		case Align::hc:
-			yo -= h / 2;
-			break;
-		case Align::ll:
-			xo -= w;
-			yo -= h;
-			break;
-		case Align::lh:
-			xo -= w;
-			break;
-		case Align::hl:
-			yo -= h;
-			break;
-		case Align::hh:
-			break;
-		}
-
-		shape = BRepBuilderAPI_MakeFace(gp_Pln(), xo, xo + w, yo, yo + h).Shape();
-		face = BRepBuilderAPI_MakeFace(gp_Pln(), xo, xo + w, yo, yo + h).Face();
-	}
-
-public:
-
-	Rectangle(float w, float h, float x = 0, float y = 0, Align align = Align::cc) :
-		w(w), h(h), x(x), y(y), align(align)
-	{
-		RectangleAlgo();
-	}
-	Rectangle(float w, float h, Align align) :
-		w(w), h(h), x(0), y(0), align(align)
-	{
-		RectangleAlgo();
-	}
-
-	operator TopoDS_Shape() const {
-		return TopoDS_Shape(shape);
-	}
-	operator TopoDS_Face() const {
-		return TopoDS_Face(face);
-	}
-
-};

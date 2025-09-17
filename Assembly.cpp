@@ -25,6 +25,8 @@ Assembly::Assembly()
 	height = tabWidth + shelvesSpacing * levels + thickness * levels  + signHeight;
 	sideHeight = height - signHeight;
 
+	rotation = 0;
+
 	/* addParams */ {
 		addParam("Thickness", thickness);
 		addParam("Inner width", inWidth);
@@ -34,12 +36,13 @@ Assembly::Assembly()
 		addParam("Slot length", slotLength);
 		addParam("Back slot length", backSlotLength);
 		addParam("Sign height", signHeight);
-		//addParam("Side height", sideHeight);
 
 		addParam("Levels", levels);
 		addParam("Front pins quantity", frontPinsQ);
 		addParam("Back pins quantity", backPinsQ);
 		addParam("Tabs", tabs);
+
+		addParam("Rotation", rotation);
 	}
 }
 
@@ -59,7 +62,8 @@ void Assembly::build()
 	tabs = getParamVali("Tabs");
 	inWidth = getParamValf("Inner width");
 	inDepth = getParamValf("Inner depth");
-	//sideHeight = getParamValf("Side height");
+
+	rotation = getParamValf("Rotation");
 
 	slotThicknessLoose = thickness + .5;
 	slotThicknessMid = thickness;

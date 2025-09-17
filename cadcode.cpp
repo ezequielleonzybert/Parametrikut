@@ -30,11 +30,13 @@ void Assembly::cadCode()
 	Rectangle backTabBase(slotThicknessLoose + tabWidth, slotLength, Align::hh);
 	Rectangle backTabCut(slotThicknessLoose, slotLength/3 ,Align::hh);
 	std::vector<vec> tabsLocs;
+	std::vector<vec> tabsJoints;
 	for (int i = 0; i < tabs; i++) {
 		float x = backBase.w / 2;
 		float ySpacing = (sideHeight - slotLength * 2) / (tabs-1);
 		float y = -backBase.h/2 + slotLength/2 + i*ySpacing;
 		tabsLocs.push_back(vec(x, y));
+		tabsJoints.push_back(vec(x+backTabCut.w/2, y+backTabCut.h, thickness/2));
 
 		TopoDS_Shape add = translate(backTabBase, vec(x, y));
 		TopoDS_Shape sub = translate(backTabCut, vec(x, y));
@@ -80,7 +82,7 @@ void Assembly::cadCode()
 		backFace = fillet(backFace, vv30, 30);
 	}
 
-	TopoDS_Shape Back = extrude(backFace, thickness);
+	Part Back = extrude(backFace, thickness);
 
 #pragma endregion
 
@@ -111,10 +113,14 @@ void Assembly::cadCode()
 	
 	gp_Trsf tr;
 	tr.SetRotation(gp_Ax1(gp_Pnt(0,0,0),gp_Dir(1,0,0)), M_PI/2);
-	Back = Back.Located(TopLoc_Location(tr));
+	//Back = Back.Located(TopLoc_Location(tr));
+	Part BackP(Back);
+	BackP.rotate(rotation,0,0);
+	BackP.addJoint(0, -200, 0);
 
 #pragma endregion
 
-	parts.push_back(Lateral);
-	parts.push_back(Back);
+	//parts.push_back(Lateral);
+	//parts.push_back(Back);
+	parts.push_back(BackP);
 }

@@ -24,6 +24,7 @@
 #include <Message.hxx>
 #include <OpenGl_GraphicDriver.hxx>
 #include <BRepBuilderAPI_Transform.hxx>
+#include <BRepBuilderAPI_MakeEdge.hxx>
 #include <TopTools_IndexedMapOfShape.hxx>
 #include <TopExp.hxx>
 #include <TopoDS_Wire.hxx>
@@ -138,22 +139,58 @@ void OcctQWidgetViewer::displayAssembly(Assembly assembly) {
     int parts = assembly.parts.size();
 
     for (int i = 0; i < parts; i++) {
-        Handle(AIS_Shape) shape = new AIS_Shape(assembly.parts[i]);
+        Handle(AIS_Shape) shape = new AIS_Shape(assembly.parts[i].Shape());
         shape->SetMaterial(Graphic3d_NOM_CHARCOAL);
         shape->SetColor(Quantity_Color(50, 1, 1, Quantity_TOC_HLS));
         myContext->Display(shape, AIS_Shaded, -1, false);
 
         TopTools_IndexedMapOfShape wireMap;
-        TopExp::MapShapes(assembly.parts[i], TopAbs_WIRE, wireMap);
+        TopExp::MapShapes(assembly.parts[i].Shape(), TopAbs_WIRE, wireMap);
 
-        for (int i = 1; i <= wireMap.Extent(); ++i) {
-            TopoDS_Wire wireTopo = TopoDS::Wire(wireMap(i));
+        for (int j = 1; j <= wireMap.Extent(); ++j) {
+            TopoDS_Wire wireTopo = TopoDS::Wire(wireMap(j));
             Handle(AIS_Shape) wire = new AIS_Shape(wireTopo);
             wire->SetColor(Quantity_Color(0.3,0.3,0.3, Quantity_TOC_RGB));
             //strok width?
             myContext->Display(wire, AIS_WireFrame, -1, false);
         }
+
+        // joint mark
+        for (int k = 0; k < assembly.parts[i].joints.size(); k++) {
+            float length = 50;
+            gp_Trsf joint = assembly.parts[i].joints[k];
+            //gp_XYZ xyz = joint.TranslationPart();
+            gp_XYZ xyz(0, 0, 0);
+            gp_Quaternion q = joint.GetRotation();
+
+            gp_Pnt x1(xyz);
+            gp_Pnt x2(xyz.X() + length, xyz.Y(), xyz.Z());
+            gp_Pnt y1(xyz);
+            gp_Pnt y2(xyz.X(), xyz.Y()+length, xyz.Z());
+            gp_Pnt z1(xyz);
+            gp_Pnt z2(xyz.X(), xyz.Y(), xyz.Z()+length);
+
+            TopoDS_Edge edgexTopo = BRepBuilderAPI_MakeEdge(x1, x2);
+            edgexTopo = TopoDS::Edge(edgexTopo.Located(TopLoc_Location(joint)));
+            Handle(AIS_Shape) edgex = new AIS_Shape(edgexTopo);
+            edgex->SetColor(Quantity_NOC_RED);
+            myContext->Display(edgex, AIS_WireFrame, -1, false);
+
+            TopoDS_Edge edgeyTopo = BRepBuilderAPI_MakeEdge(y1, y2);
+            edgeyTopo = TopoDS::Edge(edgeyTopo.Located(TopLoc_Location(joint)));
+            Handle(AIS_Shape) edgey = new AIS_Shape(edgeyTopo);
+            edgey->SetColor(Quantity_NOC_GREEN);
+            myContext->Display(edgey, AIS_WireFrame, -1, false);
+
+            TopoDS_Edge edgezTopo = BRepBuilderAPI_MakeEdge(z1, z2);
+            edgezTopo = TopoDS::Edge(edgezTopo.Located(TopLoc_Location(joint)));
+            Handle(AIS_Shape) edgez = new AIS_Shape(edgezTopo);
+            edgez->SetColor(Quantity_NOC_BLUE);
+            myContext->Display(edgez, AIS_WireFrame, -1, false);
+        }
+
     }
+
     myView->Redraw();
 }
 
