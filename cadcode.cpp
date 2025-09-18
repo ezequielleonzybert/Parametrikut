@@ -70,8 +70,20 @@ void Assembly::cadCode()
 
 		auto gx = groupBy(vertices(backFace), Axis::x);
 		auto gy = groupBy(vertices(backFace), Axis::y);
-		vv1.insert(vv1.end(), gx[1].begin(), gx[1].end());
-		vv1.insert(vv1.end(), gx[gx.size() - 2].begin(), gx[gx.size() - 2].end());
+
+		sortBy(gx[1], Axis::y);
+		for (int i = 0; i < gx[1].size(); i++) {
+			if (i % 2 == 0) {
+				vv1.push_back(gx[1][i]);
+			}
+		}
+		sortBy(gx[gx.size() - 2], Axis::y);
+		for (int i = 0; i < gx[gx.size() - 2].size(); i++) {
+			if (i % 2 == 0) {
+				vv1.push_back(gx[gx.size() - 2][i]);
+			}
+		}
+
 		vv2.insert(vv2.end(), gx[0].begin(), gx[0].end());
 		vv2.insert(vv2.end(), gx[gx.size() - 1].begin(), gx[gx.size() - 1].end());
 		vv2.insert(vv2.end(), gy[0].begin(), gy[0].end());
@@ -115,8 +127,9 @@ void Assembly::cadCode()
 	tr.SetRotation(gp_Ax1(gp_Pnt(0,0,0),gp_Dir(1,0,0)), M_PI/2);
 	//Back = Back.Located(TopLoc_Location(tr));
 	Part BackP(Back);
-	BackP.rotate(rotation,0,0);
-	BackP.addJoint(0, -200, 0);
+	BackP.rotate(0,0,0);
+	//BackP.addJoint(0, -200, 0);
+	BackP.addJoint(tabsJoints[0],-90);
 
 #pragma endregion
 

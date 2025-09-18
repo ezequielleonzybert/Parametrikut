@@ -38,8 +38,6 @@ struct Assembly{
 	float width;
 	float depth;
 	float height;
-
-	float rotation;
 		
 	Assembly();
 	~Assembly(){};

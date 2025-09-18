@@ -177,6 +177,19 @@ public:
 	}
 
 	void addJoint(float x, float y, float z = 0, float xr = 0, float yr = 0, float zr = 0) {
+		addJointLogic(x, y, z, xr, yr, zr);
+	}
+
+	void addJoint(vec pos, float xr = 0, float yr = 0, float zr = 0) {
+		addJointLogic(pos.x, pos.y, pos.z, xr, yr, zr);
+	}
+
+	operator TopoDS_Shape() const {
+		return TopoDS_Shape(shape);
+	}
+
+private:
+	void addJointLogic(float x, float y, float z, float xr, float yr, float zr) {
 		gp_Trsf tr;
 
 		float a = xr * M_PI / 180.0f;
@@ -190,11 +203,6 @@ public:
 
 		joints.push_back(transformation * tr);
 	}
-
-	operator TopoDS_Shape() const {
-		return TopoDS_Shape(shape);
-	}
-
 };
 
 inline bool equal(float a, float b, float tolerance = 1e-6f) {
@@ -371,10 +379,32 @@ inline std::vector<std::vector<TopoDS_Vertex>> groupBy(std::vector<TopoDS_Vertex
 		default:
 			break;
 		}
-		
+		// Here we could detect which Axis is the group in, and then sortBy() according to that, so the groupBY also performs a sorting for each group.
+
 		outList.push_back(group);
 		group.clear();
 	}
 
 	return outList;
+}
+
+inline void sortBy(std::vector<TopoDS_Vertex>& vv, Axis axis) {
+	std::sort(vv.begin(), vv.end(), [axis](const TopoDS_Vertex& a, const TopoDS_Vertex& b) {
+		gp_Pnt ap = BRep_Tool::Pnt(a);
+		gp_Pnt bp = BRep_Tool::Pnt(b);
+		switch (axis)
+		{
+		case Axis::x:
+			return ap.X() < bp.X();
+			break;
+		case Axis::y:
+			return ap.Y() < bp.Y();
+			break;
+		case Axis::z:
+			return ap.Z() < bp.Z();
+			break;
+		default:
+			break;
+		}
+		});
 }
