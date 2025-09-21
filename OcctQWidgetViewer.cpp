@@ -158,7 +158,7 @@ void OcctQWidgetViewer::displayAssembly(Assembly assembly) {
         // joint mark
         for (int k = 0; k < assembly.parts[i].joints.size(); k++) {
             float length = 10;
-            gp_Trsf joint = assembly.parts[i].joints[k];
+            gp_Trsf joint = assembly.parts[i].joints[k].global;
             //gp_XYZ xyz = joint.TranslationPart();
             gp_XYZ xyz(0, 0, 0);
             gp_Quaternion q = joint.GetRotation();

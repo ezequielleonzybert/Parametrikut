@@ -137,27 +137,39 @@ public:
 
 };
 
+struct Joint {
+
+	Joint() {};
+	Joint(gp_Trsf local, gp_Trsf global, const char* label) : local(local), global(global), label(label) {};
+
+	gp_Trsf local;
+	gp_Trsf global;
+	const char* label;
+};
+
 class Part {
 
 private:
 	TopoDS_Shape shape;
-	gp_Trsf transformation;
 
 public:
-	std::vector<gp_Trsf> joints;
+	std::vector<Joint> joints;
+	gp_Trsf transformation;
 
 	Part() {}
 
 	Part(TopoDS_Shape s) : shape(s) {}
 
+	TopoDS_Shape Shape() {
+		return shape;
+	}
+
 	void translate(float x = 0, float y = 0, float z = 0) {
-		gp_Trsf tr;
-		gp_Vec pos(x, y, z);
-		tr.SetTranslationPart(pos);
-		shape = shape.Located(tr);
-		for (gp_Trsf& t : joints) {
-			t.SetTranslation(pos);
-		}
+		translateLogic(x, y, z);
+	}
+
+	void translate(gp_XYZ coords) {
+		translateLogic(coords.X(), coords.Y(), coords.Z());
 	}
 
 	void rotate(float x = 0, float y = 0, float z = 0) {
@@ -168,20 +180,26 @@ public:
 		gp_Quaternion q;
 		q.SetEulerAngles(gp_Extrinsic_XYZ, a, b, c);
 		tr.SetRotationPart(q);
-		transformation = tr;
+
+		transformation *= tr;
 		shape = shape.Located(TopLoc_Location(transformation));
+
+		for (Joint& j : joints) {
+			j.global = transformation * j.local;
+		}
 	}
 
-	TopoDS_Shape Shape() {
-		return shape;
+	void addJoint(const char* label, float x, float y, float z = 0, float xr = 0, float yr = 0, float zr = 0) {
+		addJointLogic(label, x, y, z, xr, yr, zr);
 	}
 
-	void addJoint(float x, float y, float z = 0, float xr = 0, float yr = 0, float zr = 0) {
-		addJointLogic(x, y, z, xr, yr, zr);
+	void addJoint(const char* label, vec pos, float xr = 0, float yr = 0, float zr = 0) {
+		addJointLogic(label, pos.x, pos.y, pos.z, xr, yr, zr);
 	}
 
-	void addJoint(vec pos, float xr = 0, float yr = 0, float zr = 0) {
-		addJointLogic(pos.x, pos.y, pos.z, xr, yr, zr);
+	void connect(gp_Trsf j1, gp_Trsf j2) {
+
+		translate(-150,0,0);
 	}
 
 	operator TopoDS_Shape() const {
@@ -189,7 +207,20 @@ public:
 	}
 
 private:
-	void addJointLogic(float x, float y, float z, float xr, float yr, float zr) {
+	void translateLogic(float x, float y, float z) {
+		gp_Trsf tr;
+		gp_Vec pos(x, y, z);
+		tr.SetTranslationPart(pos);
+
+		transformation *= tr;
+		shape = shape.Located(transformation);
+
+		//for (Joint& j : joints) {
+		//	//j = tr * j;
+		//}
+	}
+
+	void addJointLogic(const char* label, float x, float y, float z, float xr, float yr, float zr) {
 		gp_Trsf tr;
 
 		float a = xr * M_PI / 180.0f;
@@ -201,7 +232,9 @@ private:
 
 		tr.SetTranslationPart(gp_Vec(x, y, z));
 
-		joints.push_back(transformation * tr);
+		Joint j(tr, transformation * tr, label);
+
+		joints.push_back(j);
 	}
 };
 

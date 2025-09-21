@@ -105,35 +105,35 @@ void Assembly::cadCode()
 	args.Append(lateralBase);
 
 	// lateralSideSlots
+	vec lateralJoint;
 	for (vec loc : tabsLocs) {
 		float w = slotThicknessLoose;
 		float h = slotLength;
 		float x = -tabWidth - w / 2;
 		float y = tabWidth + loc.y + backBase.h/2;
 		tools.Append(Rectangle(w, h, x, y));
+		lateralJoint.set(x, y);
+		
 	}
 
 	TopoDS_Shape lateralFace = fusecut(&args, &tools);
 	args.Clear();
 	tools.Clear();
 
-	TopoDS_Shape Lateral = extrude(lateralFace, thickness);
+	Part Lateral = extrude(lateralFace, thickness);
 
 #pragma endregion
 
 #pragma region Assembly
-	
-	gp_Trsf tr;
-	tr.SetRotation(gp_Ax1(gp_Pnt(0,0,0),gp_Dir(1,0,0)), M_PI/2);
-	//Back = Back.Located(TopLoc_Location(tr));
-	Part BackP(Back);
-	BackP.rotate(0,0,0);
-	//BackP.addJoint(0, -200, 0);
-	BackP.addJoint(tabsJoints[0],-90);
+
+
+	Back.addJoint("tab", tabsJoints[0], -90);
+
+	Back.rotate(45, 0, 0);
+	Back.rotate(0, 45, 0);
 
 #pragma endregion
 
-	//parts.push_back(Lateral);
-	//parts.push_back(Back);
-	parts.push_back(BackP);
+	parts.push_back(Lateral);
+	parts.push_back(Back);
 }
