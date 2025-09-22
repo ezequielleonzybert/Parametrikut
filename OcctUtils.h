@@ -23,8 +23,7 @@
 #include <gp_Pln.hxx>
 #include <gp_Quaternion.hxx>
 #include <unordered_set>
-
-#include <qDebug>
+#include <unordered_map>
 
 inline TopTools_ListOfShape args;
 inline TopTools_ListOfShape tools;
@@ -137,24 +136,25 @@ public:
 
 };
 
+class Part; //forward declaration
 struct Joint {
-
 	Joint() {};
-	Joint(gp_Trsf local, gp_Trsf global, const char* label) : local(local), global(global), label(label) {};
+	Joint(gp_Trsf local, gp_Trsf global, std::string label, Part* part) : local(local), global(global), label(label), part(part) {};
 
 	gp_Trsf local;
 	gp_Trsf global;
-	const char* label;
+	std::string label;
+	Part* part;
 };
 
 class Part {
 
-private:
-	TopoDS_Shape shape;
-
 public:
-	std::vector<Joint> joints;
+	TopoDS_Shape shape;
+	std::unordered_map<std::string, Joint> joints;
 	gp_Trsf transformation;
+	gp_Trsf connection;
+	std::vector<Part*> connectedParts;
 
 	Part() {}
 
@@ -182,24 +182,37 @@ public:
 		tr.SetRotationPart(q);
 
 		transformation *= tr;
+
 		shape = shape.Located(TopLoc_Location(transformation));
 
-		for (Joint& j : joints) {
-			j.global = transformation * j.local;
+		for (auto& j : joints) {
+			j.second.global = transformation * j.second.local;
+		}
+
+		for (Part* p : connectedParts) {
+			// to do
 		}
 	}
 
-	void addJoint(const char* label, float x, float y, float z = 0, float xr = 0, float yr = 0, float zr = 0) {
+	void addJoint(std::string label, float x, float y, float z = 0, float xr = 0, float yr = 0, float zr = 0) {
 		addJointLogic(label, x, y, z, xr, yr, zr);
 	}
 
-	void addJoint(const char* label, vec pos, float xr = 0, float yr = 0, float zr = 0) {
+	void addJoint(std::string label, vec pos, float xr = 0, float yr = 0, float zr = 0) {
 		addJointLogic(label, pos.x, pos.y, pos.z, xr, yr, zr);
 	}
 
-	void connect(gp_Trsf j1, gp_Trsf j2) {
+	void connect(Joint& j1, Joint& j2) {
 
-		translate(-150,0,0);
+		// adding a pointer to this part in the parent part of the connection for further transformations
+		j2.part->connectedParts.push_back(this); 
+
+		connection = gp_Trsf(j2.global * j1.global.Inverted());
+		transformation *= connection;
+		shape = shape.Located(transformation);
+		for (auto& j : joints) {
+			j.second.global = transformation * j.second.local;
+		}
 	}
 
 	operator TopoDS_Shape() const {
@@ -215,12 +228,12 @@ private:
 		transformation *= tr;
 		shape = shape.Located(transformation);
 
-		//for (Joint& j : joints) {
-		//	//j = tr * j;
-		//}
+		for (auto& j : joints) {
+			j.second.global = transformation * j.second.local;
+		}
 	}
 
-	void addJointLogic(const char* label, float x, float y, float z, float xr, float yr, float zr) {
+	void addJointLogic(std::string label, float x, float y, float z, float xr, float yr, float zr) {
 		gp_Trsf tr;
 
 		float a = xr * M_PI / 180.0f;
@@ -232,9 +245,9 @@ private:
 
 		tr.SetTranslationPart(gp_Vec(x, y, z));
 
-		Joint j(tr, transformation * tr, label);
+		Joint j(tr, transformation * tr, label, this);
 
-		joints.push_back(j);
+		joints.insert({label, j});
 	}
 };
 

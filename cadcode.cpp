@@ -16,6 +16,9 @@ void Assembly::cadCode()
 	std::vector<gp_Pnt> fillet2Locations;
 
 #pragma region Back
+
+	Part Back;
+
 	// backBase
 	Rectangle backBase(inWidth + (thickness-slotThicknessLoose), height);
 	args.Append(backBase);
@@ -36,7 +39,6 @@ void Assembly::cadCode()
 		float ySpacing = (sideHeight - slotLength * 2) / (tabs-1);
 		float y = -backBase.h/2 + slotLength/2 + i*ySpacing;
 		tabsLocs.push_back(vec(x, y));
-		tabsJoints.push_back(vec(x+backTabCut.w/2, y+backTabCut.h, thickness/2));
 
 		TopoDS_Shape add = translate(backTabBase, vec(x, y));
 		TopoDS_Shape sub = translate(backTabCut, vec(x, y));
@@ -45,6 +47,8 @@ void Assembly::cadCode()
 		tools.Append(sub);
 		args.Append(mirror(add, vec(1, 0, 0)));
 		tools.Append(mirror(sub, vec(1, 0, 0)));
+
+		Back.addJoint("tab"+std::to_string(i), x + backTabCut.w / 2, y + backTabCut.h, thickness / 2, -90);
 	}
 
 	// backSlots
@@ -94,43 +98,41 @@ void Assembly::cadCode()
 		backFace = fillet(backFace, vv30, 30);
 	}
 
-	Part Back = extrude(backFace, thickness);
+	Back.shape = extrude(backFace, thickness);
 
 #pragma endregion
 
 #pragma region Lateral
 
+	Part Lateral;
+
 	// lateralBase
 	Rectangle lateralBase(depth, sideHeight, Align::lh);
 	args.Append(lateralBase);
 
-	// lateralSideSlots
-	vec lateralJoint;
-	for (vec loc : tabsLocs) {
+	// lateralBackSlots
+	for (int i = 0; i < tabsLocs.size(); i++) {
 		float w = slotThicknessLoose;
 		float h = slotLength;
 		float x = -tabWidth - w / 2;
-		float y = tabWidth + loc.y + backBase.h/2;
+		float y = slotLength*5/6 + tabsLocs[i].y + backBase.h / 2;
 		tools.Append(Rectangle(w, h, x, y));
-		lateralJoint.set(x, y);
-		
+		Lateral.addJoint("backSlot" + std::to_string(i), x, y - h/2, thickness / 2, -90,-90,0);
 	}
 
 	TopoDS_Shape lateralFace = fusecut(&args, &tools);
 	args.Clear();
 	tools.Clear();
 
-	Part Lateral = extrude(lateralFace, thickness);
+	Lateral.shape = extrude(lateralFace, thickness);
 
 #pragma endregion
 
 #pragma region Assembly
 
 
-	Back.addJoint("tab", tabsJoints[0], -90);
-
+	Lateral.connect(Lateral.joints["backSlot1"], Back.joints["tab1"]);
 	Back.rotate(45, 0, 0);
-	Back.rotate(0, 45, 0);
 
 #pragma endregion
 

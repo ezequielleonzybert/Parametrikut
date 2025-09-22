@@ -156,9 +156,9 @@ void OcctQWidgetViewer::displayAssembly(Assembly assembly) {
         }
 
         // joint mark
-        for (int k = 0; k < assembly.parts[i].joints.size(); k++) {
+        for (auto& j : assembly.parts[i].joints) {
             float length = 10;
-            gp_Trsf joint = assembly.parts[i].joints[k].global;
+            gp_Trsf joint = j.second.global;
             //gp_XYZ xyz = joint.TranslationPart();
             gp_XYZ xyz(0, 0, 0);
             gp_Quaternion q = joint.GetRotation();
@@ -175,20 +175,21 @@ void OcctQWidgetViewer::displayAssembly(Assembly assembly) {
             Handle(AIS_Shape) edgex = new AIS_Shape(edgexTopo);
             edgex->SetColor(Quantity_NOC_RED);
             edgex->Attributes()->SetZLayer(Graphic3d_ZLayerId_Topmost);
-            myContext->Display(edgex, AIS_WireFrame, -1, false);
 
             TopoDS_Edge edgeyTopo = BRepBuilderAPI_MakeEdge(y1, y2);
             edgeyTopo = TopoDS::Edge(edgeyTopo.Located(TopLoc_Location(joint)));
             Handle(AIS_Shape) edgey = new AIS_Shape(edgeyTopo);
             edgey->SetColor(Quantity_NOC_GREEN);
             edgey->Attributes()->SetZLayer(Graphic3d_ZLayerId_Topmost);
-            myContext->Display(edgey, AIS_WireFrame, -1, false);
 
             TopoDS_Edge edgezTopo = BRepBuilderAPI_MakeEdge(z1, z2);
             edgezTopo = TopoDS::Edge(edgezTopo.Located(TopLoc_Location(joint)));
             Handle(AIS_Shape) edgez = new AIS_Shape(edgezTopo);
             edgez->SetColor(Quantity_NOC_BLUE);
             edgez->Attributes()->SetZLayer(Graphic3d_ZLayerId_Topmost);
+
+            myContext->Display(edgex, AIS_WireFrame, -1, false);
+            myContext->Display(edgey, AIS_WireFrame, -1, false);
             myContext->Display(edgez, AIS_WireFrame, -1, false);
         }
 
