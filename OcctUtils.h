@@ -3,12 +3,14 @@
 #include <TopoDS_Shape.hxx>
 #include <BRepAlgoAPI_Cut.hxx>
 #include <BRepAlgoAPI_Fuse.hxx>
+#include <BRepAlgoAPI_Common.hxx>
 #include <BRepBuilderAPI_Transform.hxx>
 #include <BRepTools_WireExplorer.hxx>
 #include <BRepBuilderAPI_MakeFace.hxx>
-#include <BRepBuilderAPI_MakeEdge2d.hxx>
+#include <BRepBuilderAPI_MakeEdge.hxx>
 #include <BRepBuilderAPI_MakeWire.hxx>
 #include <BRepBuilderAPI_MakeVertex.hxx>
+#include <GC_MakeEllipse.hxx>
 #include <GCE2d_MakeEllipse.hxx>
 #include <BRepBuilderAPI_Sewing.hxx>
 #include <BRepPrimAPI_MakePrism.hxx>
@@ -24,8 +26,7 @@
 #include <gp_Pnt.hxx>
 #include <gp_Pln.hxx>
 #include <gp_Quaternion.hxx>
-#include <gp_Elips2d.hxx>
-#include <gp_Dir2d.hxx>
+#include <gp_Elips.hxx>
 #include <unordered_set>
 #include <unordered_map>
 
@@ -142,15 +143,33 @@ public:
 
 class Ellipse {
 public:
-	float w, h, x, y;
 	TopoDS_Shape shape;
 	TopoDS_Face face;
+	float w, h, x, y;
+	gp_Dir dir = gp_Dir(1,0,0);
 
-	Ellipse() {};
 	Ellipse(float w, float h, float x = 0, float y = 0) : w(w), h(h), x(x), y(y) {
-		gp_Ax22d axis(gp_Pnt2d(0, 0), gp_Dir2d(1, 0));
-		//gp_Elips2d elips();
+		if (h > w) {
+			float aux = h;
+			h = w;
+			w = aux;
+			dir.SetXYZ(gp_XYZ(0, 1, 0));
+		}
+		gp_Ax2 axis(gp_Pnt(), gp_Dir(0,0,1), dir);
+		gp_Elips elips(axis,w,h);
+		Handle(Geom_Ellipse) handle = GC_MakeEllipse(elips).Value();
+		TopoDS_Edge edge = BRepBuilderAPI_MakeEdge(handle);
+		TopoDS_Wire wire = BRepBuilderAPI_MakeWire(edge);
+		face = BRepBuilderAPI_MakeFace(wire).Face();
+		shape = BRepBuilderAPI_MakeFace(wire).Shape();
 	};
+
+	operator TopoDS_Shape() const {
+		return TopoDS_Shape(shape);
+	}
+	operator TopoDS_Face() const {
+		return TopoDS_Face(face);
+	}
 	
 };
 
@@ -322,6 +341,7 @@ inline TopoDS_Shape fuse(TopTools_ListOfShape* args) {
 	fuse.SetTools(*args);
 	fuse.Build();
 	fuse.SimplifyResult();
+	args->Clear();
 
 	return TopoDS_Shape(fuse.Shape());
 }
@@ -348,6 +368,19 @@ inline TopoDS_Shape fusecut(TopTools_ListOfShape *args, TopTools_ListOfShape *to
 	tools->Clear();
 
 	return TopoDS_Shape(cut.Shape());
+}
+
+inline TopoDS_Shape intersect(TopTools_ListOfShape* args, TopTools_ListOfShape* tools) {
+	BRepAlgoAPI_Common common;
+
+	common.SetArguments(*args);
+	common.SetTools(*tools);
+	common.Build();
+	common.SimplifyResult();
+	args->Clear();
+	tools->Clear();
+
+	return TopoDS_Shape(common.Shape());
 }
 
 inline Part extrude(TopoDS_Shape face, float thickness) {
