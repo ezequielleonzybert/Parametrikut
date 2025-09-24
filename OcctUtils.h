@@ -147,10 +147,9 @@ public:
 	TopoDS_Face face;
 
 	Ellipse() {};
-	Ellipse(float w, float h, float x=0, float y=0) : w(w), h(h), x(x), y(y) {
+	Ellipse(float w, float h, float x = 0, float y = 0) : w(w), h(h), x(x), y(y) {
 		gp_Ax22d axis(gp_Pnt2d(0, 0), gp_Dir2d(1, 0));
-		gp_Elips2d elips()
-
+		//gp_Elips2d elips();
 	};
 	
 };

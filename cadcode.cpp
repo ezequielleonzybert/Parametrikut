@@ -111,11 +111,11 @@ void Assembly::cadCode()
 	args.Append(lateralBase);
 
 	// lateralElipseEdge
-	gp_Elips2d elips();
-	Handle(Geom2d_Ellipse) ellipse = GCE2d_MakeEllipse(gp_Ax22d(gp_Pnt2()),100,50).Value();
-	TopoDS_Edge edge = BRepBuilderAPI_MakeEdge2d(ellipse);
-	TopoDS_Wire wire = BRepBuilderAPI_MakeWire(edge);
-	TopoDS_Face face = BRepBuilderAPI_MakeFace(wire);
+	//gp_Elips2d elips();
+	//Handle(Geom2d_Ellipse) ellipse = GCE2d_MakeEllipse(gp_Ax22d(gp_Pnt2()),100,50).Value();
+	//TopoDS_Edge edge = BRepBuilderAPI_MakeEdge2d(ellipse);
+	//TopoDS_Wire wire = BRepBuilderAPI_MakeWire(edge);
+	//TopoDS_Face face = BRepBuilderAPI_MakeFace(wire);
 
 	// lateralBackSlots
 	for (int i = 0; i < tabsLocs.size(); i++) {
@@ -145,5 +145,5 @@ void Assembly::cadCode()
 
 	//parts.push_back(Lateral);
 	//parts.push_back(Back);
-	parts.push_back(face);
+	//parts.push_back(face);
 }
