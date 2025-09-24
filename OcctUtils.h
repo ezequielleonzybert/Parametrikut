@@ -7,7 +7,9 @@
 #include <BRepTools_WireExplorer.hxx>
 #include <BRepBuilderAPI_MakeFace.hxx>
 #include <BRepBuilderAPI_MakeEdge2d.hxx>
+#include <BRepBuilderAPI_MakeWire.hxx>
 #include <BRepBuilderAPI_MakeVertex.hxx>
+#include <GCE2d_MakeEllipse.hxx>
 #include <BRepBuilderAPI_Sewing.hxx>
 #include <BRepPrimAPI_MakePrism.hxx>
 #include <TopTools_ListOfShape.hxx>
@@ -22,6 +24,8 @@
 #include <gp_Pnt.hxx>
 #include <gp_Pln.hxx>
 #include <gp_Quaternion.hxx>
+#include <gp_Elips2d.hxx>
+#include <gp_Dir2d.hxx>
 #include <unordered_set>
 #include <unordered_map>
 
@@ -136,6 +140,21 @@ public:
 
 };
 
+class Ellipse {
+public:
+	float w, h, x, y;
+	TopoDS_Shape shape;
+	TopoDS_Face face;
+
+	Ellipse() {};
+	Ellipse(float w, float h, float x=0, float y=0) : w(w), h(h), x(x), y(y) {
+		gp_Ax22d axis(gp_Pnt2d(0, 0), gp_Dir2d(1, 0));
+		gp_Elips2d elips()
+
+	};
+	
+};
+
 class Part; //forward declaration
 struct Joint {
 	Joint() {};
@@ -182,7 +201,6 @@ public:
 		tr.SetRotationPart(q);
 
 		transformation *= tr;
-
 		shape = shape.Located(TopLoc_Location(transformation));
 
 		for (auto& j : joints) {
@@ -190,7 +208,21 @@ public:
 		}
 
 		for (Part* p : connectedParts) {
-			// to do
+			p->applyParentTransform(transformation);
+		}
+	}
+
+	void applyParentTransform(const gp_Trsf& parentGlobal) {
+		// recalcula la transform del hijo en base a la transform global del padre
+		transformation = parentGlobal * connection;
+		shape = shape.Located(TopLoc_Location(transformation));
+
+		for (auto& j : joints) {
+			j.second.global = transformation * j.second.local;
+		}
+
+		for (Part* p : connectedParts) {
+			p->applyParentTransform(transformation);
 		}
 	}
 
@@ -203,13 +235,21 @@ public:
 	}
 
 	void connect(Joint& j1, Joint& j2) {
+		// j1 = joint en este (hijo), j2 = joint en el otro (padre)
+		Part* parent = j2.part;
+		parent->connectedParts.push_back(this);
 
-		// adding a pointer to this part in the parent part of the connection for further transformations
-		j2.part->connectedParts.push_back(this); 
+		gp_Trsf T_p = parent->transformation;
+		// T_child_new = T_parent * j2.local * inverse(j1.local)
+		gp_Trsf T_c_new = T_p * j2.local * j1.local.Inverted();
 
-		connection = gp_Trsf(j2.global * j1.global.Inverted());
-		transformation *= connection;
-		shape = shape.Located(transformation);
+		// connection = inverse(T_parent) * T_child_new
+		connection = T_p.Inverted() * T_c_new;
+
+		// aplicar la transform resultante al hijo
+		transformation = T_c_new;
+		shape = shape.Located(TopLoc_Location(transformation));
+
 		for (auto& j : joints) {
 			j.second.global = transformation * j.second.local;
 		}
@@ -230,6 +270,10 @@ private:
 
 		for (auto& j : joints) {
 			j.second.global = transformation * j.second.local;
+		}
+
+		for (Part* p : connectedParts) {
+			p->applyParentTransform(transformation);
 		}
 	}
 
