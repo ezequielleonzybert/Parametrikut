@@ -32,13 +32,13 @@ void Assembly::cadCode()
 	// backTabs
 	Rectangle backTabBase(slotThicknessLoose + tabWidth, slotLength, Align::hh);
 	Rectangle backTabCut(slotThicknessLoose, slotLength/3 ,Align::hh);
-	std::vector<vec> tabsLocs;
+	std::vector<vec> backTabsLocs;
 	std::vector<vec> tabsJoints;
 	for (int i = 0; i < tabs; i++) {
 		float x = backBase.w / 2;
-		float ySpacing = (sideHeight - slotLength * 2) / (tabs-1);
+		float ySpacing = (sideHeight - slotLength*2.5) / (tabs-1);
 		float y = -backBase.h/2 + slotLength/2 + i*ySpacing;
-		tabsLocs.push_back(vec(x, y));
+		backTabsLocs.push_back(vec(x, y));
 
 		TopoDS_Shape add = translate(backTabBase, vec(x, y));
 		TopoDS_Shape sub = translate(backTabCut, vec(x, y));
@@ -53,12 +53,14 @@ void Assembly::cadCode()
 
 	// backSlots
 	Rectangle backSlot(backSlotLength, slotThicknessLoose);
+	std::vector<vec> backSlotsLocs;
 	for (int i = 0; i < levels; i++) {
 		float y = -backBase.h / 2 + i * shelvesSpacing + tabWidth + slotThicknessLoose / 2 + thickness * i;
 		for (int j = 0; j < backPinsQ; j++) {
 			float spacing = (backBase.w - backPinsQ * backSlotLength) / (backPinsQ + 1);
 			float x = backBase.w / 2 - backSlotLength / 2 - spacing * (j + 1) - j * backSlotLength;
 			tools.Append(translate(backSlot, vec(x,y)));
+			backSlotsLocs.push_back(vec(x,y));
 		}
 	}
 
@@ -110,20 +112,44 @@ void Assembly::cadCode()
 	Rectangle lateralBase(depth, sideHeight, Align::lh);
 	args.Append(lateralBase);
 
-	// lateralElipseEdge
-	tools.Append(Ellipse(depth, sideHeight));
+	Rectangle lateralStraightRect(topShelfDepth+tabWidth+thickness, lateralBase.h, Align::lh);
 
-	//TopoDS_Shape lateralBase2 = intersect(&args, &tools);
+	// lateralElipseEdge
+	Ellipse ellipse(depth - lateralStraightRect.w, sideHeight, -lateralStraightRect.w);
+	tools.Append(ellipse);
 	args.Append(intersect(&args, &tools));
 
+	args.Append(lateralStraightRect);
+	args.Append(fuse(&args));
+
+
 	// lateralBackSlots
-	for (int i = 0; i < tabsLocs.size(); i++) {
+	for (int i = 0; i < backTabsLocs.size(); i++) {
 		float w = slotThicknessLoose;
 		float h = slotLength;
-		float x = -tabWidth - w / 2;
-		float y = slotLength*5/6 + tabsLocs[i].y + backBase.h / 2;
+		float x = -tabWidth - thickness / 2;
+		float y = slotLength*5/6 + backTabsLocs[i].y + backBase.h / 2;
 		tools.Append(Rectangle(w, h, x, y));
 		Lateral.addJoint("backSlot" + std::to_string(i), x, y - h/2, thickness / 2, -90,-90,0);
+	}
+
+	// lateralSlides / lateralFrontSlots
+	for (int i = 0; i < levels; i++) {
+		float y = backSlotsLocs[i*backPinsQ].y + backBase.h/2;
+		float x = - lateralStraightRect.w - ellipse.getXatY(y);
+		float slideW = abs(x) - tabWidth - thickness;
+		float slideH = slotThicknessLoose;
+		tools.Append(Rectangle(slideW, slideH, x, y));
+
+		float slotW = slotThicknessLoose;
+		float slotH = slotLength;
+		y += slideH / 2 + tabWidth/2;
+		float spacing = tabWidth;
+		if (i != levels - 1)
+			x = -lateralStraightRect.w - ellipse.getXatY(y + slotLength) + slotW / 2 + spacing;
+		else
+			x = -lateralStraightRect.w;
+		tools.Append(Rectangle(slotW, slotH, x, y, Align::ch));
 	}
 
 	TopoDS_Shape lateralFace = fusecut(&args, &tools);

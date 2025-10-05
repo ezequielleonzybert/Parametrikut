@@ -25,6 +25,7 @@ struct Assembly{
 	float slotLength;
 	float backSlotLength;
 	float shelvesSpacing;
+	float topShelfDepth;
 	float signHeight;
 	float sideHeight;
 

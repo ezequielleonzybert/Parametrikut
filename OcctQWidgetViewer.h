@@ -24,6 +24,8 @@ class AIS_ViewCube;
 //! Inheritance from AIS_ViewController is used to translate
 //! user input events (mouse, keyboard, window resize, etc.)
 //! to 3D Viewer (panning, rotation, zooming, etc.).
+//! 
+
 class OcctQWidgetViewer : public QWidget, public AIS_ViewController
 {
     Q_OBJECT
@@ -51,8 +53,7 @@ public:
 
     //! Default widget size.
     virtual QSize sizeHint() const override { return QSize(720, 480); }
-
-public:
+    
     //! Handle subview focus change.
     virtual void OnSubviewChanged(const Handle(AIS_InteractiveContext)&,
         const Handle(V3d_View)&,

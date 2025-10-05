@@ -155,7 +155,7 @@ public:
 			w = aux;
 			dir.SetXYZ(gp_XYZ(0, 1, 0));
 		}
-		gp_Ax2 axis(gp_Pnt(), gp_Dir(0,0,1), dir);
+		gp_Ax2 axis(gp_Pnt(x,y,0), gp_Dir(0,0,1), dir);
 		gp_Elips elips(axis,w,h);
 		Handle(Geom_Ellipse) handle = GC_MakeEllipse(elips).Value();
 		TopoDS_Edge edge = BRepBuilderAPI_MakeEdge(handle);
@@ -163,6 +163,10 @@ public:
 		face = BRepBuilderAPI_MakeFace(wire).Face();
 		shape = BRepBuilderAPI_MakeFace(wire).Shape();
 	};
+
+	float getXatY(float y) {
+		return w * sqrt(1 - (y * y) / (h * h));
+	}
 
 	operator TopoDS_Shape() const {
 		return TopoDS_Shape(shape);

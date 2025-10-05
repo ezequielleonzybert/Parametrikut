@@ -10,6 +10,7 @@ Assembly::Assembly()
 	slotLength = 30;
 	backSlotLength = slotLength * 1.5;
 	shelvesSpacing = 100;
+	topShelfDepth = 50;
 	signHeight = 50;
 
 	levels = 3;

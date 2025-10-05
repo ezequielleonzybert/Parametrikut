@@ -10,8 +10,6 @@ Parametrikut::Parametrikut(QWidget *parent)
     assembly = new Assembly();
     assembly->build();
 
-
-
     centralWidget = new QWidget(this);
     setCentralWidget(centralWidget);
 
@@ -47,6 +45,7 @@ Parametrikut::Parametrikut(QWidget *parent)
     viewer->displayAssembly(*assembly); //first display
 
     centralLayout->addWidget(viewer, 1);
+    viewer->update();
 
     qApp->setStyleSheet(R"(
         QMainWindow {
