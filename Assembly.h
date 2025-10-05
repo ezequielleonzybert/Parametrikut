@@ -15,7 +15,7 @@ struct Param {
 struct Assembly{
 
 	std::vector<Part> parts;
-	std::vector<Param> params;
+	std::vector<Param> params, prevParams;
 
 	float thickness;
 	float tabWidth;

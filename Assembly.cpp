@@ -26,21 +26,18 @@ Assembly::Assembly()
 	height = tabWidth + shelvesSpacing * levels + thickness * levels  + signHeight;
 	sideHeight = height - signHeight;
 
-	/* addParams */ {
-		addParam("Thickness", thickness);
-		addParam("Inner width", inWidth);
-		addParam("Inner depth", inDepth);
-		addParam("Shelves spacing", shelvesSpacing);
-		addParam("Tab width", tabWidth);
-		addParam("Slot length", slotLength);
-		addParam("Back slot length", backSlotLength);
-		addParam("Sign height", signHeight);
-
-		addParam("Levels", levels);
-		addParam("Front pins quantity", frontPinsQ);
-		addParam("Back pins quantity", backPinsQ);
-		addParam("Tabs", tabs);
-	}
+	addParam("Thickness", thickness);
+	addParam("Inner width", inWidth);
+	addParam("Inner depth", inDepth);
+	addParam("Shelves spacing", shelvesSpacing);
+	addParam("Tab width", tabWidth);
+	addParam("Slot length", slotLength);
+	addParam("Back slot length", backSlotLength);
+	addParam("Sign height", signHeight);
+	addParam("Levels", levels);
+	addParam("Front pins quantity", frontPinsQ);
+	addParam("Back pins quantity", backPinsQ);
+	addParam("Tabs", tabs);
 }
 
 void Assembly::build()

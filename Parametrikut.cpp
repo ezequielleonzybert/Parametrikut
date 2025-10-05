@@ -2,6 +2,7 @@
 #include <QRegularExpression>
 #include <QRegularExpressionValidator>
 #include <QLineEdit>
+#include <QString>
 #include <QLabel>
 
 Parametrikut::Parametrikut(QWidget *parent)
@@ -46,6 +47,7 @@ Parametrikut::Parametrikut(QWidget *parent)
 
     centralLayout->addWidget(viewer, 1);
     viewer->update();
+    viewer->setFocus();
 
     qApp->setStyleSheet(R"(
         QMainWindow {
@@ -85,18 +87,26 @@ void Parametrikut::buildGrid(std::vector<Param> params) {
         gridLayout->addWidget(lineEdit, i, (i * 2 + 1)%2);
 
         connect(lineEdit, &QLineEdit::editingFinished, [=]() {
-			QString text = lineEdit->text();
-			text.replace(',', '.');
-            if (isFloat) {
-                float valf = text.toFloat();
-                assembly->params[i].valf = valf;
+
+            int vali = lineEdit->text().toInt();
+            float valf = lineEdit->text().toFloat();
+
+            if ((params[i].valf == -1 && params[i].vali != vali) ||
+                (params[i].vali == -1 && params[i].valf != valf)) {
+
+                QString text = lineEdit->text();
+                text.replace(',', '.');
+                if (isFloat) {
+                    float valf = text.toFloat();
+                    assembly->params[i].valf = valf;
+                }
+                else {
+                    int vali = text.toInt();
+                    assembly->params[i].vali = vali;
+                }
+                assembly->build();
+                viewer->displayAssembly(*assembly);
             }
-            else {
-                int vali = text.toInt();
-				assembly->params[i].vali = vali;
-            }
-			assembly->build();
-            viewer->displayAssembly(*assembly);
         });
 	}
 }

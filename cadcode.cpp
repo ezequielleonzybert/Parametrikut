@@ -33,7 +33,6 @@ void Assembly::cadCode()
 	Rectangle backTabBase(slotThicknessLoose + tabWidth, slotLength, Align::hh);
 	Rectangle backTabCut(slotThicknessLoose, slotLength/3 ,Align::hh);
 	std::vector<vec> backTabsLocs;
-	std::vector<vec> tabsJoints;
 	for (int i = 0; i < tabs; i++) {
 		float x = backBase.w / 2;
 		float ySpacing = (sideHeight - slotLength*2.5) / (tabs-1);
@@ -48,7 +47,8 @@ void Assembly::cadCode()
 		args.Append(mirror(add, vec(1, 0, 0)));
 		tools.Append(mirror(sub, vec(1, 0, 0)));
 
-		Back.addJoint("tab"+std::to_string(i), x + backTabCut.w / 2, y + backTabCut.h, thickness / 2, -90);
+		Back.addJoint("tab" + std::to_string(Back.joints.size()-1), x + backTabCut.w / 2, y + backTabCut.h, thickness / 2, -90);
+		Back.addJoint("tab" + std::to_string(Back.joints.size()-1), -x - backTabCut.w / 2, y + backTabCut.h, thickness / 2, -90);
 	}
 
 	// backSlots
@@ -164,10 +164,15 @@ void Assembly::cadCode()
 
 	Back.rotate(90, 0, 0);
 
-	Lateral.connect(Lateral.joints["backSlot1"], Back.joints["tab1"]);
+	Part Lateral1(Lateral);
+	Part Lateral2(Lateral);
+
+	Lateral1.connect(Lateral1.joints["backSlot1"], Back.joints["tab1"]);
+	Lateral2.connect(Lateral2.joints["backSlot1"], Back.joints["tab2"]);
 
 #pragma endregion
 
-	parts.push_back(Lateral);
+	parts.push_back(Lateral1);
+	parts.push_back(Lateral2);
 	parts.push_back(Back);
 }
