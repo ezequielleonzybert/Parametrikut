@@ -121,10 +121,22 @@
     <ClInclude Include="Assembly.h" />
     <ClInclude Include="OcctQtTools.h" />
     <ClInclude Include="OcctUtils.h" />
+    <ClInclude Include="resource.h" />
     <QtMoc Include="OcctQWidgetViewer.h" />
   </ItemGroup>
   <ItemGroup>
     <None Include="README.md" />
+  </ItemGroup>
+  <ItemGroup>
+    <QtRcc Include="Parametrikut.qrc" />
+  </ItemGroup>
+  <ItemGroup>
+    <ResourceCompile Include="Parametrikut.rc" />
+  </ItemGroup>
+  <ItemGroup>
+    <Image Include="icon1.ico" />
+    <Image Include="logo\icon1.ico" />
+    <Image Include="logo\logo.png" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Condition="Exists('$(QtMsBuild)\qt.targets')">
