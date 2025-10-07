@@ -23,7 +23,7 @@ struct Assembly{
 	float slotThicknessMid;
 	float slotThicknessTight;
 	float slotLength;
-	float backSlotLength;
+	float backPinLength;
 	float shelvesSpacing;
 	float topShelfDepth;
 	float signHeight;
@@ -53,6 +53,5 @@ struct Assembly{
 
 	void cadCode();
 	Part shelf(float h);
-	Part lateral();
 };
 
