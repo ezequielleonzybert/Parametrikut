@@ -1,7 +1,6 @@
 #include "Parametrikut.h"
 #include <QRegularExpression>
 #include <QRegularExpressionValidator>
-#include <QLineEdit>
 #include <QString>
 #include <QLabel>
 
@@ -56,18 +55,18 @@ Parametrikut::Parametrikut(QWidget *parent)
     )");
 }
 
-void Parametrikut::buildGrid(std::vector<Param> params) {
+void Parametrikut::buildGrid(std::vector<Param> &params) {
 
     QRegularExpression rxFloat(R"(^([0-9]+([.,][0-9]*)?|[.,][0-9]+)?$)");
     QRegularExpressionValidator* validFloat = new QRegularExpressionValidator(rxFloat, this);
     QRegularExpression rxInt("[0-9]+");
     QRegularExpressionValidator* validInt = new QRegularExpressionValidator(rxInt, this);
 
-    for(int i = 0; i< params.size(); i++) {
+    for(int i = 0; i < params.size(); i++) {
 
         Param param = params[i];
 		QLabel* label = new QLabel(param.name,leftWidget);
-        QLineEdit* lineEdit = new QLineEdit(leftWidget);
+        myLineEdit* lineEdit = new myLineEdit(leftWidget);
 
         lineEdit->setAlignment(Qt::AlignRight);
 
@@ -91,8 +90,8 @@ void Parametrikut::buildGrid(std::vector<Param> params) {
             int vali = lineEdit->text().toInt();
             float valf = lineEdit->text().toFloat();
 
-            if ((params[i].valf == -1 && params[i].vali != vali) ||
-                (params[i].vali == -1 && params[i].valf != valf)) {
+            if ((!isFloat && assembly->params[i].vali != vali) ||
+                (isFloat && assembly->params[i].valf != valf)) {
 
                 QString text = lineEdit->text();
                 text.replace(',', '.');
@@ -107,6 +106,10 @@ void Parametrikut::buildGrid(std::vector<Param> params) {
                 assembly->build();
                 viewer->displayAssembly(*assembly);
             }
+        });
+
+        connect(lineEdit, &QLineEdit::hasFocus, [=]() {
+            lineEdit->selectAll();
         });
 	}
 }

@@ -15,7 +15,7 @@ struct Param {
 struct Assembly{
 
 	std::vector<Part> parts;
-	std::vector<Param> params, prevParams;
+	std::vector<Param> params;
 
 	float thickness;
 	float tabWidth;
@@ -52,5 +52,7 @@ struct Assembly{
 	float getParamValf(const char* name);
 
 	void cadCode();
+	Part shelf(float h);
+	Part lateral();
 };
 

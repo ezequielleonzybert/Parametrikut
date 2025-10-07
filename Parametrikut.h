@@ -10,6 +10,15 @@
 #include <QVBoxLayout>
 #include <QPushButton>
 #include <QGridLayout>
+#include <QLineEdit>
+
+class myLineEdit : public QLineEdit {
+public:
+    myLineEdit(QWidget* parent=nullptr) : QLineEdit(parent) {}
+    virtual void mousePressEvent(QMouseEvent* e) override {
+        selectAll();
+    }
+};
 
 class Parametrikut : public QMainWindow
 {
@@ -30,6 +39,6 @@ public:
     Parametrikut(QWidget *parent = nullptr);
     ~Parametrikut() {};
 
-    void buildGrid(std::vector<Param> params);
+    void buildGrid(std::vector<Param> &params);
 };
 

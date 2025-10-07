@@ -164,7 +164,7 @@ public:
 		shape = BRepBuilderAPI_MakeFace(wire).Shape();
 	};
 
-	float getXatY(float y) {
+	float getRadAtY(float y) {
 		return w * sqrt(1 - (y * y) / (h * h));
 	}
 
@@ -191,6 +191,7 @@ struct Joint {
 class Part {
 
 public:
+	const char* label = nullptr;
 	TopoDS_Shape shape;
 	std::unordered_map<std::string, Joint> joints;
 	gp_Trsf transformation;
@@ -198,6 +199,26 @@ public:
 	std::vector<Part*> connectedParts;
 
 	Part() {}
+
+	Part(const Part& other) {
+		label = other.label;
+		shape = other.shape;
+		transformation = other.transformation;
+
+		// deep copy de los joints
+		for (const auto& [jointLabel, joint] : other.joints) {
+			joints[jointLabel] = Joint(
+				joint.local,
+				joint.global,
+				joint.label,
+				this  // <- apunta al Part copiado
+			);
+		}
+
+		// connectedParts NO se copia porque los hijos siguen siendo del original
+		// Si querés copiar la jerarquía completa, habría que hacer un deep copy recursivo
+		connectedParts.clear();
+	}
 
 	Part(TopoDS_Shape s) : shape(s) {}
 
@@ -225,24 +246,19 @@ public:
 		transformation *= tr;
 		shape = shape.Located(TopLoc_Location(transformation));
 
-		for (auto& j : joints) {
-			j.second.global = transformation * j.second.local;
+		for (auto& [label, j] : joints) {
+			j.global = transformation * j.local;
 		}
 
-		for (Part* p : connectedParts) {
-			p->applyParentTransform(transformation);
-		}
+		applyParentTransform(transformation);
 	}
 
 	void applyParentTransform(const gp_Trsf& parentGlobal) {
-		// recalcula la transform del hijo en base a la transform global del padre
 		transformation = parentGlobal * connection;
 		shape = shape.Located(TopLoc_Location(transformation));
-
-		for (auto& j : joints) {
-			j.second.global = transformation * j.second.local;
+		for (auto& [label, j] : joints) {
+			j.global = transformation * j.local;
 		}
-
 		for (Part* p : connectedParts) {
 			p->applyParentTransform(transformation);
 		}
@@ -257,24 +273,15 @@ public:
 	}
 
 	void connect(Joint& j1, Joint& j2) {
-		// j1 = joint en este (hijo), j2 = joint en el otro (padre)
 		Part* parent = j2.part;
 		parent->connectedParts.push_back(this);
 
-		gp_Trsf T_p = parent->transformation;
-		// T_child_new = T_parent * j2.local * inverse(j1.local)
-		gp_Trsf T_c_new = T_p * j2.local * j1.local.Inverted();
-
-		// connection = inverse(T_parent) * T_child_new
-		connection = T_p.Inverted() * T_c_new;
-
-		// aplicar la transform resultante al hijo
-		transformation = T_c_new;
+		transformation = parent->transformation * j2.local * j1.local.Inverted();
+		connection = parent->transformation.Inverted() * transformation;
 		shape = shape.Located(TopLoc_Location(transformation));
 
-		for (auto& j : joints) {
-			j.second.global = transformation * j.second.local;
-		}
+		for (auto& [label, j] : joints)
+			j.global = transformation * j.local;
 	}
 
 	operator TopoDS_Shape() const {
@@ -290,8 +297,8 @@ private:
 		transformation *= tr;
 		shape = shape.Located(transformation);
 
-		for (auto& j : joints) {
-			j.second.global = transformation * j.second.local;
+		for (auto& [label, j] : joints) {
+			j.global = transformation * j.local;
 		}
 
 		for (Part* p : connectedParts) {
@@ -348,6 +355,19 @@ inline TopoDS_Shape fuse(TopTools_ListOfShape* args) {
 	args->Clear();
 
 	return TopoDS_Shape(fuse.Shape());
+}
+
+inline TopoDS_Shape cut(TopTools_ListOfShape* args, TopTools_ListOfShape* tools) {
+	BRepAlgoAPI_Cut cut;
+	cut.SetRunParallel(true);
+	cut.SetArguments(*args);
+	cut.SetTools(*tools);
+	cut.Build();
+	cut.SimplifyResult();
+	args->Clear();
+	tools->Clear();
+
+	return TopoDS_Shape(cut.Shape());
 }
 
 inline TopoDS_Shape fusecut(TopTools_ListOfShape *args, TopTools_ListOfShape *tools) {
