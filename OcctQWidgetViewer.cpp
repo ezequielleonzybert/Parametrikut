@@ -157,43 +157,44 @@ void OcctQWidgetViewer::displayAssembly(Assembly assembly) {
         }
 
         // joint mark
-        for (auto& [label,jointPtr] : assembly.parts[i].joints) {
-            float length = 10;
-            gp_Trsf joint = jointPtr.global;
-            //gp_XYZ xyz = joint.TranslationPart();
-            gp_XYZ xyz(0, 0, 0);
-            gp_Quaternion q = joint.GetRotation();
+        if (false) {
+            for (auto& [label, jointPtr] : assembly.parts[i].joints) {
+                float length = 10;
+                gp_Trsf joint = jointPtr.global;
+                //gp_XYZ xyz = joint.TranslationPart();
+                gp_XYZ xyz(0, 0, 0);
+                gp_Quaternion q = joint.GetRotation();
 
-            gp_Pnt x1(xyz);
-            gp_Pnt x2(xyz.X() + length, xyz.Y(), xyz.Z());
-            gp_Pnt y1(xyz);
-            gp_Pnt y2(xyz.X(), xyz.Y()+length, xyz.Z());
-            gp_Pnt z1(xyz);
-            gp_Pnt z2(xyz.X(), xyz.Y(), xyz.Z()+length);
+                gp_Pnt x1(xyz);
+                gp_Pnt x2(xyz.X() + length, xyz.Y(), xyz.Z());
+                gp_Pnt y1(xyz);
+                gp_Pnt y2(xyz.X(), xyz.Y() + length, xyz.Z());
+                gp_Pnt z1(xyz);
+                gp_Pnt z2(xyz.X(), xyz.Y(), xyz.Z() + length);
 
-            TopoDS_Edge edgexTopo = BRepBuilderAPI_MakeEdge(x1, x2);
-            edgexTopo = TopoDS::Edge(edgexTopo.Located(TopLoc_Location(joint)));
-            Handle(AIS_Shape) edgex = new AIS_Shape(edgexTopo);
-            edgex->SetColor(Quantity_NOC_RED);
-            edgex->Attributes()->SetZLayer(Graphic3d_ZLayerId_Topmost);
+                TopoDS_Edge edgexTopo = BRepBuilderAPI_MakeEdge(x1, x2);
+                edgexTopo = TopoDS::Edge(edgexTopo.Located(TopLoc_Location(joint)));
+                Handle(AIS_Shape) edgex = new AIS_Shape(edgexTopo);
+                edgex->SetColor(Quantity_NOC_RED);
+                edgex->Attributes()->SetZLayer(Graphic3d_ZLayerId_Topmost);
 
-            TopoDS_Edge edgeyTopo = BRepBuilderAPI_MakeEdge(y1, y2);
-            edgeyTopo = TopoDS::Edge(edgeyTopo.Located(TopLoc_Location(joint)));
-            Handle(AIS_Shape) edgey = new AIS_Shape(edgeyTopo);
-            edgey->SetColor(Quantity_NOC_GREEN);
-            edgey->Attributes()->SetZLayer(Graphic3d_ZLayerId_Topmost);
+                TopoDS_Edge edgeyTopo = BRepBuilderAPI_MakeEdge(y1, y2);
+                edgeyTopo = TopoDS::Edge(edgeyTopo.Located(TopLoc_Location(joint)));
+                Handle(AIS_Shape) edgey = new AIS_Shape(edgeyTopo);
+                edgey->SetColor(Quantity_NOC_GREEN);
+                edgey->Attributes()->SetZLayer(Graphic3d_ZLayerId_Topmost);
 
-            TopoDS_Edge edgezTopo = BRepBuilderAPI_MakeEdge(z1, z2);
-            edgezTopo = TopoDS::Edge(edgezTopo.Located(TopLoc_Location(joint)));
-            Handle(AIS_Shape) edgez = new AIS_Shape(edgezTopo);
-            edgez->SetColor(Quantity_NOC_BLUE);
-            edgez->Attributes()->SetZLayer(Graphic3d_ZLayerId_Topmost);
+                TopoDS_Edge edgezTopo = BRepBuilderAPI_MakeEdge(z1, z2);
+                edgezTopo = TopoDS::Edge(edgezTopo.Located(TopLoc_Location(joint)));
+                Handle(AIS_Shape) edgez = new AIS_Shape(edgezTopo);
+                edgez->SetColor(Quantity_NOC_BLUE);
+                edgez->Attributes()->SetZLayer(Graphic3d_ZLayerId_Topmost);
 
-            myContext->Display(edgex, AIS_WireFrame, -1, false);
-            myContext->Display(edgey, AIS_WireFrame, -1, false);
-            myContext->Display(edgez, AIS_WireFrame, -1, false);
-        }
-
+                myContext->Display(edgex, AIS_WireFrame, -1, false);
+                myContext->Display(edgey, AIS_WireFrame, -1, false);
+                myContext->Display(edgez, AIS_WireFrame, -1, false);
+            }
+        }       
     }
 
     myView->Redraw();

@@ -8,14 +8,14 @@ Assembly::Assembly()
 	slotThicknessMid = thickness;
 	slotThicknessTight = thickness - .5;
 	slotLength = 30;
-	backPinLength = slotLength * 1.5;
+	pinLength = slotLength * 1.5;
 	shelvesSpacing = 100;
 	topShelfDepth = 50;
 	signHeight = 50;
 
 	levels = 3;
 	backPinsQ = 2;
-	frontPinsQ = 1;
+	frontPinsQ = std::min(std::max(1,backPinsQ-1),2);
 	tabs = 2;
 
 	inWidth = 200;
@@ -29,13 +29,13 @@ Assembly::Assembly()
 	addParam("Thickness", thickness);
 	addParam("Inner width", inWidth);
 	addParam("Inner depth", inDepth);
+	addParam("Top shelf depth", topShelfDepth);
 	addParam("Shelves spacing", shelvesSpacing);
 	addParam("Tab width", tabWidth);
 	addParam("Slot length", slotLength);
-	addParam("Back slot length", backPinLength);
+	addParam("Pin length", pinLength);
 	addParam("Sign height", signHeight);
 	addParam("Levels", levels);
-	addParam("Front pins quantity", frontPinsQ);
 	addParam("Back pins quantity", backPinsQ);
 	addParam("Tabs", tabs);
 }
@@ -48,14 +48,14 @@ void Assembly::build()
 	shelvesSpacing = getParamValf("Shelves spacing");
 	tabWidth = getParamValf("Tab width");
 	slotLength = getParamValf("Slot length");
-	backPinLength = getParamValf("Back slot length");
+	pinLength = getParamValf("Pin length");
 	signHeight = getParamValf("Sign height");
 	levels = getParamVali("Levels");
-	frontPinsQ = getParamVali("Front pins quantity");
 	backPinsQ = getParamVali("Back pins quantity");
 	tabs = getParamVali("Tabs");
 	inWidth = getParamValf("Inner width");
 	inDepth = getParamValf("Inner depth");
+	topShelfDepth = getParamValf("Top shelf depth");
 
 	slotThicknessLoose = thickness + .5;
 	slotThicknessMid = thickness;

@@ -23,7 +23,7 @@ struct Assembly{
 	float slotThicknessMid;
 	float slotThicknessTight;
 	float slotLength;
-	float backPinLength;
+	float pinLength;
 	float shelvesSpacing;
 	float topShelfDepth;
 	float signHeight;

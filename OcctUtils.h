@@ -347,6 +347,8 @@ inline TopoDS_Shape fuse(TopTools_ListOfShape* args) {
 
 	BRepAlgoAPI_Fuse fuse;
 	fuse.SetRunParallel(true);
+	fuse.SetFuzzyValue(1e-5); 
+	//the original tolerance was 1e-7 and sometimes the parts didn't collide to each other so they don't fuse
 
 	fuse.SetArguments(*args);
 	fuse.SetTools(*args);
@@ -372,26 +374,11 @@ inline TopoDS_Shape cut(TopTools_ListOfShape* args, TopTools_ListOfShape* tools)
 
 inline TopoDS_Shape fusecut(TopTools_ListOfShape *args, TopTools_ListOfShape *tools) {
 
-	BRepAlgoAPI_Fuse fuse;
-	BRepAlgoAPI_Cut cut;
-	cut.SetRunParallel(true);
-	fuse.SetRunParallel(true);
-
-	fuse.SetArguments(*args);
-	fuse.SetTools(*args);
-	fuse.Build();
-	fuse.SimplifyResult();
-	TopoDS_Shape fused = fuse.Shape();
-	args->Clear();
+	TopoDS_Shape fused = fuse(args);
 	args->Append(fused);
-	cut.SetArguments(*args);
-	cut.SetTools(*tools);
-	cut.Build();
-	cut.SimplifyResult();
-	args->Clear();
-	tools->Clear();
+	TopoDS_Shape cuted = cut(args, tools);
 
-	return TopoDS_Shape(cut.Shape());
+	return TopoDS_Shape(cuted);
 }
 
 inline TopoDS_Shape intersect(TopTools_ListOfShape* args, TopTools_ListOfShape* tools) {

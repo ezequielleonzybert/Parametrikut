@@ -36,15 +36,27 @@ Part Assembly::shelf(float d) {
 
 	// shelflBackPins
 	for (int i = 0; i < backPinsQ; i++) {
-		float w = backPinLength;
+		float w = pinLength;
 		float h = thickness * 1.5;
-		float spacing = (base.w - backPinsQ * backPinLength) / (backPinsQ + 1);
-		float x = base.w / 2 - backPinLength / 2 - spacing * (i + 1) - i * backPinLength;
-		float y = base.h / 2 + h / 2;
+		float spacing = (base.w - backPinsQ * pinLength) / (backPinsQ + 1);
+		float x = base.w / 2 - pinLength / 2 - spacing * (i + 1) - i * pinLength;
+		float y = base.h / 2.0001 + h / 2;
 		args.Append(Rectangle(w, h, x, y));
 	}
 
 	// shelfFrontPins
+	int pinsQ = 1;
+	float w = pinLength;
+	float h = thickness;
+	float y = -base.h / 2 - h / 2;
+	if (pinsQ * pinLength < base.w / 7) {
+		pinsQ++;
+		float x = -base.w / 7;
+		args.Append(Rectangle(w, h, x, y));
+		args.Append(Rectangle(w, h, -x, y));
+	}
+	else args.Append(Rectangle(w, h, 0, y));
+
 
 	TopoDS_Shape fused= fuse(&args);
 	Shelf.shape = extrude(fused, thickness);
@@ -98,13 +110,13 @@ void Assembly::cadCode()
 	}
 
 	// backSlots
-	Rectangle backSlot(backPinLength, slotThicknessLoose);
+	Rectangle backSlot(pinLength, slotThicknessLoose);
 	std::vector<vec> backSlotsLocs;
 	for (int i = 0; i < levels; i++) {
 		float y = -backBase.h / 2 + i * shelvesSpacing + tabWidth + slotThicknessLoose / 2 + thickness * i;
 		for (int j = 0; j < backPinsQ; j++) {
-			float spacing = (backBase.w - backPinsQ * backPinLength) / (backPinsQ + 1);
-			float x = backBase.w / 2 - backPinLength / 2 - spacing * (j + 1) - j * backPinLength;
+			float spacing = (backBase.w - backPinsQ * pinLength) / (backPinsQ + 1);
+			float x = backBase.w / 2 - pinLength / 2 - spacing * (j + 1) - j * pinLength;
 			tools.Append(translate(backSlot, vec(x, y)));
 			backSlotsLocs.push_back(vec(x, y));
 		}
