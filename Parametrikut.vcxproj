@@ -66,6 +66,7 @@
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <ClCompile>
       <AdditionalIncludeDirectories>C:\OCCT\occt_vc14-64-with-debug\inc;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <PreprocessToFile>false</PreprocessToFile>
     </ClCompile>
     <Link>
       <AdditionalLibraryDirectories>C:\OCCT\occt_vc14-64-with-debug\win64\vc14\libd;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>

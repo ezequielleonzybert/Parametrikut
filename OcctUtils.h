@@ -66,7 +66,7 @@ struct vec {
 	}
 };
 
-class Rectangle {
+class Rect {
 
 public:
 	float w, h, x, y;
@@ -77,7 +77,7 @@ private:
 	TopoDS_Shape shape;
 	TopoDS_Face face;
 
-	void RectangleAlgo() {
+	void RectAlgo() {
 
 		float xo = x;
 		float yo = y;
@@ -121,15 +121,15 @@ private:
 
 public:
 
-	Rectangle(float w, float h, float x = 0, float y = 0, Align align = Align::cc) :
+	Rect(float w, float h, float x = 0, float y = 0, Align align = Align::cc) :
 		w(w), h(h), x(x), y(y), align(align)
 	{
-		RectangleAlgo();
+		RectAlgo();
 	}
-	Rectangle(float w, float h, Align align) :
+	Rect(float w, float h, Align align) :
 		w(w), h(h), x(0), y(0), align(align)
 	{
-		RectangleAlgo();
+		RectAlgo();
 	}
 
 	operator TopoDS_Shape() const {
@@ -541,3 +541,15 @@ inline void sortBy(std::vector<TopoDS_Vertex>& vv, Axis axis) {
 		}
 		});
 }
+
+inline TopoDS_Shape tab(float tabWidth, float tabHeight, float slideThickness) {
+	Rect frontTabBase(slideThickness + tabWidth, tabHeight, Align::hh);
+	Rect frontTabCut(slideThickness, tabHeight / 3, Align::hh);
+
+	args.Append(frontTabBase);
+	tools.Append(frontTabCut);
+
+	return fusecut(&args, &tools);
+	return TopoDS_Shape();
+}
+

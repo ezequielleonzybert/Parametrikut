@@ -16,17 +16,17 @@ Part Assembly::shelf(float d) {
 	// base
 	float slotW = slotThicknessLoose;
 	float thicknessDiff = (slotW - thickness);
-	Rectangle base(inWidth - thicknessDiff, d);
+	Rect base(inWidth - thicknessDiff, d);
 
 	// tabs
 	float tabX = base.w / 2;
 	float tabY = base.h / 2;
-	Rectangle tabBase1(tabWidth + slotW, d / 2 + tabWidth, tabX, -tabY, Align::hh);
-	Rectangle tabBase2(tabWidth + slotW, d / 2 + tabWidth, -tabX, -tabY, Align::lh);
+	Rect tabBase1(tabWidth + slotW, d / 2 + tabWidth, tabX, -tabY, Align::hh);
+	Rect tabBase2(tabWidth + slotW, d / 2 + tabWidth, -tabX, -tabY, Align::lh);
 	args.Append(tabBase1);
 	args.Append(tabBase2);
-	Rectangle tabSlot1(slotW, d / 2, tabX, tabY, Align::hl);
-	Rectangle tabSlot2(slotW, d / 2, -tabX, tabY, Align::ll);
+	Rect tabSlot1(slotW, d / 2, tabX, tabY, Align::hl);
+	Rect tabSlot2(slotW, d / 2, -tabX, tabY, Align::ll);
 	tools.Append(tabSlot1);
 	tools.Append(tabSlot2);
 
@@ -41,7 +41,7 @@ Part Assembly::shelf(float d) {
 		float spacing = (base.w - backPinsQ * pinLength) / (backPinsQ + 1);
 		float x = base.w / 2 - pinLength / 2 - spacing * (i + 1) - i * pinLength;
 		float y = base.h / 2.0001 + h / 2;
-		args.Append(Rectangle(w, h, x, y));
+		args.Append(Rect(w, h, x, y));
 	}
 
 	// shelfFrontPins
@@ -52,10 +52,10 @@ Part Assembly::shelf(float d) {
 	if (pinsQ * pinLength < base.w / 7) {
 		pinsQ++;
 		float x = -base.w / 7;
-		args.Append(Rectangle(w, h, x, y));
-		args.Append(Rectangle(w, h, -x, y));
+		args.Append(Rect(w, h, x, y));
+		args.Append(Rect(w, h, -x, y));
 	}
-	else args.Append(Rectangle(w, h, 0, y));
+	else args.Append(Rect(w, h, 0, y));
 
 
 	TopoDS_Shape fused= fuse(&args);
@@ -78,7 +78,7 @@ void Assembly::cadCode()
 	Part Back;
 
 	// backBase
-	Rectangle backBase(inWidth + (thickness - slotThicknessLoose), height);
+	Rect backBase(inWidth + (thickness - slotThicknessLoose), height);
 	args.Append(backBase);
 	{
 		float x = backBase.w / 2;
@@ -88,8 +88,8 @@ void Assembly::cadCode()
 	}
 
 	// backTabs
-	Rectangle backTabBase(slotThicknessLoose + tabWidth, slotLength, Align::hh);
-	Rectangle backTabCut(slotThicknessLoose, slotLength / 3, Align::hh);
+	Rect backTabBase(slotThicknessLoose + tabWidth, slotLength, Align::hh);
+	Rect backTabCut(slotThicknessLoose, slotLength / 3, Align::hh);
 	std::vector<vec> backTabsLocs;
 	for (int i = 0; i < tabs; i++) {
 		float x = backBase.w / 2;
@@ -110,7 +110,7 @@ void Assembly::cadCode()
 	}
 
 	// backSlots
-	Rectangle backSlot(pinLength, slotThicknessLoose);
+	Rect backSlot(pinLength, slotThicknessLoose);
 	std::vector<vec> backSlotsLocs;
 	for (int i = 0; i < levels; i++) {
 		float y = -backBase.h / 2 + i * shelvesSpacing + tabWidth + slotThicknessLoose / 2 + thickness * i;
@@ -155,7 +155,7 @@ void Assembly::cadCode()
 
 		backFace = fillet(backFace, vv1, 1);
 		backFace = fillet(backFace, vv2, thickness);
-		backFace = fillet(backFace, vv30, 30);
+		backFace = fillet(backFace, vv30, thickness);
 	}
 
 	Back.shape = extrude(backFace, thickness);
@@ -167,10 +167,10 @@ void Assembly::cadCode()
 	Part Lateral;
 
 	// lateralBase
-	Rectangle lateralBase(depth, sideHeight, Align::lh);
+	Rect lateralBase(depth, sideHeight, Align::lh);
 	args.Append(lateralBase);
 
-	Rectangle lateralStraightRect(topShelfDepth + tabWidth + thickness, lateralBase.h, Align::lh);
+	Rect lateralStraightRect(topShelfDepth + tabWidth + thickness, lateralBase.h, Align::lh);
 
 	// lateralElipseEdge
 	Ellipse ellipse(depth - lateralStraightRect.w, sideHeight, -lateralStraightRect.w);
@@ -187,7 +187,7 @@ void Assembly::cadCode()
 		float h = slotLength;
 		float backSlotX = -tabWidth - thickness / 2;
 		float backSlotY = slotLength * 5 / 6 + backTabsLocs[i].y + backBase.h / 2;
-		tools.Append(Rectangle(w, h, backSlotX, backSlotY));
+		tools.Append(Rect(w, h, backSlotX, backSlotY));
 		Lateral.addJoint("backSlot" + std::to_string(i), backSlotX, backSlotY - h / 2, thickness / 2, -90, -90, 0);
 	}
 
@@ -217,8 +217,8 @@ void Assembly::cadCode()
 			slideW = abs(slideX) - tabWidth - thickness - (x1 - x2) / 2;
 		}
 
-		tools.Append(Rectangle(slideW*2, slideH, slideX, slideY));
-		tools.Append(Rectangle(slotW, slotH, slotX, slotY, Align::ch));
+		tools.Append(Rect(slideW*2, slideH, slideX, slideY));
+		tools.Append(Rect(slotW, slotH, slotX, slotY, Align::ch));
 
 		Lateral.addJoint(
 			"slide" + std::to_string(i),
@@ -252,6 +252,24 @@ void Assembly::cadCode()
 
 #pragma endregion
 
+#pragma region Front
+
+	Part Front;
+
+	Rect frontBase(inWidth, slotLength);
+	args.Append(frontBase);
+
+	// frontTabs
+	TopoDS_Shape frontTab = tab(tabWidth, slotLength, slotThicknessLoose);
+	TopoDS_Shape rightTab = translate(frontTab, vec(500, 0, 0));
+	TopoDS_Shape leftTab = mirror(frontTab, vec(1,0,0));
+	//args.Append(rightTab);
+	//args.Append(leftTab);
+
+	Front.shape = extrude(frontBase,thickness);
+
+#pragma endregion
+
 #pragma region Assembly
 
 	Part Lateral1(Lateral);
@@ -276,4 +294,5 @@ void Assembly::cadCode()
 	parts.push_back(Back);
 	for(Part s : shelves)
 		parts.push_back(s);
+	parts.push_back(Front);
 }
