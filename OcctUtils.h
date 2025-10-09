@@ -10,6 +10,7 @@
 #include <BRepBuilderAPI_MakeEdge.hxx>
 #include <BRepBuilderAPI_MakeWire.hxx>
 #include <BRepBuilderAPI_MakeVertex.hxx>
+#include <BRepBuilderAPI_MakePolygon.hxx>
 #include <GC_MakeEllipse.hxx>
 #include <GCE2d_MakeEllipse.hxx>
 #include <BRepBuilderAPI_Sewing.hxx>
@@ -63,6 +64,29 @@ struct vec {
 		this->x = x;
 		this->y = y;
 		this->z = z;
+	}
+};
+
+class Triangle {
+public:
+	TopoDS_Face face;
+	TopoDS_Shape shape;
+	Triangle(float height, float width, float x=0, float y =0) {
+		gp_Pnt p1(-width / 2 + x,  y, 0);
+		gp_Pnt p2(width / 2 + x, y, 0);
+		gp_Pnt p3(x, height + y, 0);
+
+		BRepBuilderAPI_MakePolygon poly(p1, p2, p3, true);
+		TopoDS_Wire wire = poly.Wire();
+		face = BRepBuilderAPI_MakeFace(wire).Face();
+		shape = BRepBuilderAPI_MakeFace(wire).Shape();
+	}
+
+	operator TopoDS_Shape() const {
+		return TopoDS_Shape(shape);
+	}
+	operator TopoDS_Face() const {
+		return TopoDS_Face(face);
 	}
 };
 
@@ -300,10 +324,10 @@ private:
 		for (auto& [label, j] : joints) {
 			j.global = transformation * j.local;
 		}
-
-		for (Part* p : connectedParts) {
-			p->applyParentTransform(transformation);
-		}
+		applyParentTransform(transformation);
+		//for (Part* p : connectedParts) {
+		//	p->applyParentTransform(transformation);
+		//}
 	}
 
 	void addJointLogic(std::string label, float x, float y, float z, float xr, float yr, float zr) {
@@ -340,7 +364,7 @@ inline TopoDS_Shape mirror(TopoDS_Shape shape, vec dir, vec pnt = vec::vec(0,0,0
 	gp_Ax2 ax(gp_Pnt(pnt.x, pnt.y, pnt.z), gp_Dir(dir.x, dir.y, dir.z));
 	tr.SetMirror(ax);
 	BRepBuilderAPI_Transform result(shape, tr, true);
-	return result.Shape().Reversed();
+	return result.Shape();
 }
 
 inline TopoDS_Shape fuse(TopTools_ListOfShape* args) {
@@ -542,14 +566,13 @@ inline void sortBy(std::vector<TopoDS_Vertex>& vv, Axis axis) {
 		});
 }
 
-inline TopoDS_Shape tab(float tabWidth, float tabHeight, float slideThickness) {
-	Rect frontTabBase(slideThickness + tabWidth, tabHeight, Align::hh);
-	Rect frontTabCut(slideThickness, tabHeight / 3, Align::hh);
+inline TopoDS_Shape tab(float tabWidth, float tabHeight, float slideThickness, float slideLength) {
+	Rect tabBase(slideThickness + tabWidth, tabHeight, Align::hh);
+	Rect tabCut(slideThickness, slideLength, Align::hh);
 
-	args.Append(frontTabBase);
-	tools.Append(frontTabCut);
+	args.Append(tabBase);
+	tools.Append(tabCut);
 
 	return fusecut(&args, &tools);
-	return TopoDS_Shape();
 }
 

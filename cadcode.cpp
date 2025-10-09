@@ -79,7 +79,6 @@ void Assembly::cadCode()
 
 	// backBase
 	Rect backBase(inWidth + (thickness - slotThicknessLoose), height);
-	args.Append(backBase);
 	{
 		float x = backBase.w / 2;
 		float y = backBase.h / 2;
@@ -88,8 +87,7 @@ void Assembly::cadCode()
 	}
 
 	// backTabs
-	Rect backTabBase(slotThicknessLoose + tabWidth, slotLength, Align::hh);
-	Rect backTabCut(slotThicknessLoose, slotLength / 3, Align::hh);
+	TopoDS_Shape backTab = tab(tabWidth, slotLength, slotThicknessLoose, slotLength/3);
 	std::vector<vec> backTabsLocs;
 	for (int i = 0; i < tabs; i++) {
 		float x = backBase.w / 2;
@@ -97,17 +95,15 @@ void Assembly::cadCode()
 		float y = -backBase.h / 2 + slotLength / 2 + i * ySpacing;
 		backTabsLocs.push_back(vec(x, y));
 
-		TopoDS_Shape add = translate(backTabBase, vec(x, y));
-		TopoDS_Shape sub = translate(backTabCut, vec(x, y));
+		TopoDS_Shape backTabMoved = translate(backTab, vec(x, y));
+		args.Append(backTabMoved);
+		args.Append(mirror(backTabMoved, vec(1, 0, 0)));
 
-		args.Append(add);
-		tools.Append(sub);
-		args.Append(mirror(add, vec(1, 0, 0)));
-		tools.Append(mirror(sub, vec(1, 0, 0)));
-
-		Back.addJoint("tab" + std::to_string(i), x + backTabCut.w / 2, y + backTabCut.h, thickness / 2, -90);
-		Back.addJoint("tab" + std::to_string(i*2), -x - backTabCut.w / 2, y + backTabCut.h, thickness / 2, -90);
+		Back.addJoint("tab" + std::to_string(i), x + slotThicknessLoose / 2, y + slotLength/3, thickness / 2, -90);
+		Back.addJoint("tab" + std::to_string(i*2), -x - slotThicknessLoose / 2, y + slotLength/3, thickness / 2, -90);
 	}
+	args.Append(backBase);
+	args.Append(fuse(&args));
 
 	// backSlots
 	Rect backSlot(pinLength, slotThicknessLoose);
@@ -122,9 +118,7 @@ void Assembly::cadCode()
 		}
 	}
 
-	TopoDS_Shape backFace = fusecut(&args, &tools);
-	args.Clear();
-	tools.Clear();
+	TopoDS_Shape backFace = cut(&args, &tools);
 
 	if (doFillet)
 	{
@@ -257,16 +251,31 @@ void Assembly::cadCode()
 	Part Front;
 
 	Rect frontBase(inWidth, slotLength);
-	args.Append(frontBase);
 
 	// frontTabs
-	TopoDS_Shape frontTab = tab(tabWidth, slotLength, slotThicknessLoose);
-	TopoDS_Shape rightTab = translate(frontTab, vec(500, 0, 0));
-	TopoDS_Shape leftTab = mirror(frontTab, vec(1,0,0));
-	//args.Append(rightTab);
-	//args.Append(leftTab);
+	TopoDS_Shape frontTab = tab(tabWidth, slotLength, slotThicknessLoose, slotLength/2);
+	TopoDS_Shape rightTab = translate(frontTab, vec(frontBase.w/2, -frontBase.h/2, 0));
+	TopoDS_Shape leftTab = mirror(rightTab, vec(1,0,0));
 
-	Front.shape = extrude(frontBase,thickness);
+	args.Append(frontBase);
+	args.Append(rightTab);
+	args.Append(leftTab);
+
+	float x = frontBase.w / 2 + thickness/2;
+	float y = -slotLength / 2 + slotLength / 2;
+	Front.addJoint("tab0", vec(x, y, thickness / 2),-90);
+	Front.addJoint("tab1", vec(-x, y, thickness / 2),-90);
+
+	float cutX = frontBase.w / 2 - tabWidth;
+	Triangle triangleCut(-slotLength/3, slotLength/2, cutX - slotLength/4, frontBase.h/2);
+	Rect rectangleCut(cutX - slotLength/4, frontBase.h/3, 0 ,frontBase.h/2 - frontBase.h/3,Align::hh);
+
+	tools.Append(triangleCut);
+	tools.Append(rectangleCut);
+	tools.Append(mirror(triangleCut, vec(1, 0, 0)));
+	tools.Append(mirror(rectangleCut,vec(1,0,0)));
+
+	Front.shape = extrude(fusecut(&args,&tools),thickness);
 
 #pragma endregion
 
@@ -280,9 +289,12 @@ void Assembly::cadCode()
 	Lateral1.connect(Lateral1.joints["backSlot1"], Back.joints["tab1"]);
 	Lateral2.connect(Lateral2.joints["backSlot1"], Back.joints["tab2"]);
 
+	std::vector<Part> fronts;
 	for (int i = 0; i < levels; i++)
 	{
+		fronts.push_back(Part(Front));
 		shelves[i].connect(shelves[i].joints["slide0"], Lateral1.joints["slide" + std::to_string(i)]);
+		fronts[i].connect(fronts[i].joints["tab0"], Lateral1.joints["frontSlot" + std::to_string(i)]);
 	}
 
 	//Back.rotate(45, 0, 90);
@@ -292,7 +304,8 @@ void Assembly::cadCode()
 	parts.push_back(Lateral1);
 	parts.push_back(Lateral2);
 	parts.push_back(Back);
-	for(Part s : shelves)
-		parts.push_back(s);
-	parts.push_back(Front);
+	for (int i = 0; i < levels; i++) {
+		parts.push_back(shelves[i]);
+		parts.push_back(fronts[i]);
+	}
 }
