@@ -3,11 +3,13 @@ This is where the CAD code goes. Within this function, you can use OpenCASCADE
 but the parameters should be added in the Assembly struct with "addParam()"
 and not as local variables.
 
-Append shapes to fuse in the args array and shapes to cut in the tools array, then run fusecut()
+Push the finished parts to the "parts" vector so the viewer can show them.
 */
 
 #include "Assembly.h"
 #include "OcctUtils.h"
+
+bool doFillet = true;
 
 Part Assembly::shelf(float d) {
 
@@ -59,6 +61,28 @@ Part Assembly::shelf(float d) {
 
 
 	TopoDS_Shape fused= fuse(&args);
+
+	if (doFillet) {
+		std::vector<TopoDS_Vertex> vv1;
+		std::vector<TopoDS_Vertex> vv2;
+
+		auto gx = groupBy(vertices(fused), Axis::x);
+		auto gy = groupBy(vertices(fused), Axis::y);
+
+		vv2.push_back(gx[0][0]);
+		vv2.push_back(gx[0][1]);
+		vv2.push_back(gx[2][1]);
+		vv2.push_back(gx[gx.size() - 1][0]);
+		vv2.push_back(gx[gx.size() - 1][1]);
+		vv2.push_back(gx[gx.size() - 3][1]);
+
+		vv1.push_back(gx[1][1]);
+		vv1.push_back(gx[gx.size() - 2][0]);
+		
+		fused = fillet(fused, vv1, 1);
+		fused = fillet(fused, vv2, thickness);
+	}
+
 	Shelf.shape = extrude(fused, thickness);
 
 	Shelf.addJoint("slide0", inWidth / 2 + thickness / 2, 0, thickness / 2);
@@ -69,22 +93,12 @@ Part Assembly::shelf(float d) {
 
 void Assembly::cadCode()
 {
-	bool doFillet = true;
-	std::vector<gp_Pnt> fillet1Locations;
-	std::vector<gp_Pnt> fillet2Locations;
-
 #pragma region Back
 
 	Part Back;
 
 	// backBase
 	Rect backBase(inWidth + (thickness - slotThicknessLoose), height);
-	{
-		float x = backBase.w / 2;
-		float y = backBase.h / 2;
-		fillet2Locations.push_back(gp_Pnt(-x, -y, 0));
-		fillet2Locations.push_back(gp_Pnt(x, -y, 0));
-	}
 
 	// backTabs
 	TopoDS_Shape backTab = tab(tabWidth, slotLength, slotThicknessLoose, slotLength/3);
@@ -275,7 +289,35 @@ void Assembly::cadCode()
 	tools.Append(mirror(triangleCut, vec(1, 0, 0)));
 	tools.Append(mirror(rectangleCut,vec(1,0,0)));
 
-	Front.shape = extrude(fusecut(&args,&tools),thickness);
+	TopoDS_Shape frontShape(fusecut(&args, &tools));
+
+	if (doFillet) {
+		std::vector<TopoDS_Vertex> vv1;
+		std::vector<TopoDS_Vertex> vv2;
+
+		auto gx = groupBy(vertices(frontShape), Axis::x);
+		auto gy = groupBy(vertices(frontShape), Axis::y);
+
+		vv1.push_back(gx[1][0]);
+		vv1.push_back(gx[2][0]);
+		vv1.push_back(gx[gx.size() - 2][1]);
+		vv1.push_back(gx[gx.size() - 3][0]);
+
+		vv2.push_back(gx[0][0]);
+		vv2.push_back(gx[0][1]);
+		vv2.push_back(gx[3][0]);
+		vv2.push_back(gx[4][0]);
+		vv2.push_back(gx[gx.size() - 5][0]);
+		vv2.push_back(gx[gx.size() - 4][0]);
+		vv2.push_back(gx[gx.size() - 1][0]);
+		vv2.push_back(gx[gx.size() - 1][1]);
+
+		frontShape = fillet(frontShape, vv1, 1);
+		frontShape = fillet(frontShape, vv2, thickness);
+
+	}
+
+	Front.shape = extrude(frontShape,thickness);
 
 #pragma endregion
 
@@ -301,7 +343,7 @@ void Assembly::cadCode()
 
 #pragma endregion
 
-	parts.push_back(Lateral1);
+	//parts.push_back(Lateral1);
 	parts.push_back(Lateral2);
 	parts.push_back(Back);
 	for (int i = 0; i < levels; i++) {
