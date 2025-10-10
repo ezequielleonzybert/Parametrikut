@@ -7,6 +7,7 @@ Assembly::Assembly()
 	slotThicknessLoose = thickness + .5;
 	slotThicknessMid = thickness;
 	slotThicknessTight = thickness - .5;
+	looseDiff = slotThicknessLoose - thickness;
 	slotLength = 30;
 	pinLength = slotLength * 1.5;
 	shelvesSpacing = 100;

@@ -59,7 +59,6 @@ Part Assembly::shelf(float d) {
 	}
 	else args.Append(Rect(w, h, 0, y));
 
-
 	TopoDS_Shape fused= fuse(&args);
 
 	if (doFillet) {
@@ -280,6 +279,7 @@ void Assembly::cadCode()
 	Front.addJoint("tab0", vec(x, y, thickness / 2),-90);
 	Front.addJoint("tab1", vec(-x, y, thickness / 2),-90);
 
+	// frontCut
 	float cutX = frontBase.w / 2 - tabWidth;
 	Triangle triangleCut(-slotLength/3, slotLength/2, cutX - slotLength/4, frontBase.h/2);
 	Rect rectangleCut(cutX - slotLength/4, frontBase.h/3, 0 ,frontBase.h/2 - frontBase.h/3,Align::hh);
@@ -288,6 +288,9 @@ void Assembly::cadCode()
 	tools.Append(rectangleCut);
 	tools.Append(mirror(triangleCut, vec(1, 0, 0)));
 	tools.Append(mirror(rectangleCut,vec(1,0,0)));
+
+	//frontSlot
+	tools.Append(Rect(pinLength, slotThicknessLoose, 0, -tabWidth/2 - slotThicknessLoose/2));
 
 	TopoDS_Shape frontShape(fusecut(&args, &tools));
 
