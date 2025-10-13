@@ -1,4 +1,4 @@
-#pragma once
+ï»¿#pragma once
 
 #include <TopoDS_Shape.hxx>
 #include <BRepAlgoAPI_Cut.hxx>
@@ -40,7 +40,7 @@ enum class Axis {
 	z
 };
 
-enum class Align{
+enum class Align {
 	cc,
 	cl,
 	lc,
@@ -57,9 +57,11 @@ struct vec {
 	float y;
 	float z;
 	vec() :
-		x(0), y(0), z(0) {}
-	vec(float x, float y, float z = 0) : 
-		x(x), y(y), z(z) {}
+		x(0), y(0), z(0) {
+	}
+	vec(float x, float y, float z = 0) :
+		x(x), y(y), z(z) {
+	}
 	void set(float x, float y, float z = 0) {
 		this->x = x;
 		this->y = y;
@@ -71,8 +73,8 @@ class Triangle {
 public:
 	TopoDS_Face face;
 	TopoDS_Shape shape;
-	Triangle(float height, float width, float x=0, float y =0) {
-		gp_Pnt p1(-width / 2 + x,  y, 0);
+	Triangle(float height, float width, float x = 0, float y = 0) {
+		gp_Pnt p1(-width / 2 + x, y, 0);
 		gp_Pnt p2(width / 2 + x, y, 0);
 		gp_Pnt p3(x, height + y, 0);
 
@@ -170,7 +172,7 @@ public:
 	TopoDS_Shape shape;
 	TopoDS_Face face;
 	float w, h, x, y;
-	gp_Dir dir = gp_Dir(1,0,0);
+	gp_Dir dir = gp_Dir(1, 0, 0);
 
 	Ellipse(float w, float h, float x = 0, float y = 0) : w(w), h(h), x(x), y(y) {
 		if (h > w) {
@@ -179,8 +181,8 @@ public:
 			w = aux;
 			dir.SetXYZ(gp_XYZ(0, 1, 0));
 		}
-		gp_Ax2 axis(gp_Pnt(x,y,0), gp_Dir(0,0,1), dir);
-		gp_Elips elips(axis,w,h);
+		gp_Ax2 axis(gp_Pnt(x, y, 0), gp_Dir(0, 0, 1), dir);
+		gp_Elips elips(axis, w, h);
 		Handle(Geom_Ellipse) handle = GC_MakeEllipse(elips).Value();
 		TopoDS_Edge edge = BRepBuilderAPI_MakeEdge(handle);
 		TopoDS_Wire wire = BRepBuilderAPI_MakeWire(edge);
@@ -198,7 +200,7 @@ public:
 	operator TopoDS_Face() const {
 		return TopoDS_Face(face);
 	}
-	
+
 };
 
 class Part; //forward declaration
@@ -240,7 +242,7 @@ public:
 		}
 
 		// connectedParts NO se copia porque los hijos siguen siendo del original
-		// Si querés copiar la jerarquía completa, habría que hacer un deep copy recursivo
+		// Si querï¿½s copiar la jerarquï¿½a completa, habrï¿½a que hacer un deep copy recursivo
 		connectedParts.clear();
 	}
 
@@ -344,7 +346,7 @@ private:
 
 		Joint j(tr, transformation * tr, label, this);
 
-		joints.insert({label, j});
+		joints.insert({ label, j });
 	}
 };
 
@@ -354,12 +356,12 @@ inline bool equal(float a, float b, float tolerance = 1e-6f) {
 
 inline TopoDS_Shape translate(TopoDS_Shape shape, vec v) {
 	gp_Trsf tr;
-	tr.SetTranslation(gp_Vec(v.x,v.y,v.z));
+	tr.SetTranslation(gp_Vec(v.x, v.y, v.z));
 	BRepBuilderAPI_Transform result(shape, tr, true);
 	return result.Shape();
 }
 
-inline TopoDS_Shape mirror(TopoDS_Shape shape, vec dir, vec pnt = vec::vec(0,0,0) ) {
+inline TopoDS_Shape mirror(TopoDS_Shape shape, vec dir, vec pnt = vec::vec(0, 0, 0)) {
 	gp_Trsf tr;
 	gp_Ax2 ax(gp_Pnt(pnt.x, pnt.y, pnt.z), gp_Dir(dir.x, dir.y, dir.z));
 	tr.SetMirror(ax);
@@ -371,7 +373,7 @@ inline TopoDS_Shape fuse(TopTools_ListOfShape* args) {
 
 	BRepAlgoAPI_Fuse fuse;
 	fuse.SetRunParallel(true);
-	fuse.SetFuzzyValue(1e-5); 
+	fuse.SetFuzzyValue(1e-5);
 	//the original tolerance was 1e-7 and sometimes the parts didn't collide to each other so they don't fuse
 
 	fuse.SetArguments(*args);
@@ -396,7 +398,7 @@ inline TopoDS_Shape cut(TopTools_ListOfShape* args, TopTools_ListOfShape* tools)
 	return TopoDS_Shape(cut.Shape());
 }
 
-inline TopoDS_Shape fusecut(TopTools_ListOfShape *args, TopTools_ListOfShape *tools) {
+inline TopoDS_Shape fusecut(TopTools_ListOfShape* args, TopTools_ListOfShape* tools) {
 
 	TopoDS_Shape fused = fuse(args);
 	args->Append(fused);
@@ -419,7 +421,7 @@ inline TopoDS_Shape intersect(TopTools_ListOfShape* args, TopTools_ListOfShape* 
 }
 
 inline Part extrude(TopoDS_Shape face, float thickness) {
-	TopoDS_Shape p = BRepPrimAPI_MakePrism(face, gp_Vec(0,0,thickness));
+	TopoDS_Shape p = BRepPrimAPI_MakePrism(face, gp_Vec(0, 0, thickness));
 	return Part(p);
 }
 
@@ -497,10 +499,10 @@ inline std::vector<std::vector<TopoDS_Vertex>> groupBy(std::vector<TopoDS_Vertex
 		default:
 			break;
 		}
-	});
+		});
 
 	std::vector<TopoDS_Vertex> group;
-	for (int i = 0; i < vv.size()-1; i++) {
+	for (int i = 0; i < vv.size() - 1; i++) {
 		gp_Pnt p1 = BRep_Tool::Pnt(vv[i]);
 		gp_Pnt p2 = BRep_Tool::Pnt(vv[i + 1]);
 
@@ -575,4 +577,3 @@ inline TopoDS_Shape tab(float tabWidth, float tabHeight, float slideThickness, f
 
 	return fusecut(&args, &tools);
 }
-

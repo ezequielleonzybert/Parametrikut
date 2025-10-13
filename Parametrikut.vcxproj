@@ -67,6 +67,8 @@
     <ClCompile>
       <AdditionalIncludeDirectories>C:\OCCT\occt_vc14-64-with-debug\inc;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <PreprocessToFile>false</PreprocessToFile>
+      <DisableSpecificWarnings>4251</DisableSpecificWarnings>
+      <PrecompiledHeader>NotUsing</PrecompiledHeader>
     </ClCompile>
     <Link>
       <AdditionalLibraryDirectories>C:\OCCT\occt_vc14-64-with-debug\win64\vc14\libd;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
@@ -112,11 +114,21 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <QtMoc Include="Parametrikut.h" />
-    <ClCompile Include="Assembly.cpp" />
-    <ClCompile Include="cadcode.cpp" />
-    <ClCompile Include="OcctQWidgetViewer.cpp" />
-    <ClCompile Include="Parametrikut.cpp" />
-    <ClCompile Include="main.cpp" />
+    <ClCompile Include="Assembly.cpp">
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">NotUsing</PrecompiledHeader>
+    </ClCompile>
+    <ClCompile Include="cadcode.cpp">
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">NotUsing</PrecompiledHeader>
+    </ClCompile>
+    <ClCompile Include="OcctQWidgetViewer.cpp">
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">NotUsing</PrecompiledHeader>
+    </ClCompile>
+    <ClCompile Include="Parametrikut.cpp">
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">NotUsing</PrecompiledHeader>
+    </ClCompile>
+    <ClCompile Include="main.cpp">
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">NotUsing</PrecompiledHeader>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Assembly.h" />

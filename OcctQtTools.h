@@ -5,7 +5,6 @@
 #define _OcctQtTools_HeaderFile
 
 #include <Aspect_VKey.hxx>
-
 #include <QMouseEvent>
 
 //! Auxiliary tools between Qt and OCCT definitions.

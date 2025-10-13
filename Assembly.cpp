@@ -2,25 +2,25 @@
 
 Assembly::Assembly()
 {
-	thickness = 3.12;
-	tabWidth = 10;
-	slotThicknessLoose = thickness + .5;
+	thickness = 3.12f;
+	tabWidth = 10.f;
+	slotThicknessLoose = thickness + .5f;
 	slotThicknessMid = thickness;
-	slotThicknessTight = thickness - .5;
+	slotThicknessTight = thickness - .5f;
 	looseDiff = slotThicknessLoose - thickness;
-	slotLength = 30;
-	pinLength = slotLength * 1.5;
-	shelvesSpacing = 100;
-	topShelfDepth = 50;
-	signHeight = 50;
+	slotLength = 30.f;
+	pinLength = slotLength * 1.5f;
+	shelvesSpacing = 100.f;
+	topShelfDepth = 50.f;
+	signHeight = 50.f;
 
 	levels = 3;
 	backPinsQ = 2;
 	frontPinsQ = std::min(std::max(1,backPinsQ-1),2);
 	tabs = 2;
 
-	inWidth = 200;
-	inDepth = 100;
+	inWidth = 200.f;
+	inDepth = 100.f;
 
 	width = inWidth + tabWidth*2 + thickness*2;
 	depth = inDepth + tabWidth*2;
@@ -58,9 +58,9 @@ void Assembly::build()
 	inDepth = getParamValf("Inner depth");
 	topShelfDepth = getParamValf("Top shelf depth");
 
-	slotThicknessLoose = thickness + .5;
+	slotThicknessLoose = thickness + .5f;
 	slotThicknessMid = thickness;
-	slotThicknessTight = thickness - .5; 
+	slotThicknessTight = thickness - .5f; 
 
 	width = inWidth + tabWidth * 2 + thickness * 2;
 	depth = inDepth + tabWidth * 2;

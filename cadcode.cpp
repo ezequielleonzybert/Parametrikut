@@ -39,10 +39,10 @@ Part Assembly::shelf(float d) {
 	// shelflBackPins
 	for (int i = 0; i < backPinsQ; i++) {
 		float w = pinLength;
-		float h = thickness * 1.5;
+		float h = thickness * 1.5f;
 		float spacing = (base.w - backPinsQ * pinLength) / (backPinsQ + 1);
 		float x = base.w / 2 - pinLength / 2 - spacing * (i + 1) - i * pinLength;
-		float y = base.h / 2.0001 + h / 2;
+		float y = base.h / 2 + h / 2;
 		args.Append(Rect(w, h, x, y));
 	}
 
@@ -59,7 +59,7 @@ Part Assembly::shelf(float d) {
 	}
 	else args.Append(Rect(w, h, 0, y));
 
-	TopoDS_Shape fused= fuse(&args);
+	TopoDS_Shape fused = fuse(&args);
 
 	if (doFillet) {
 		std::vector<TopoDS_Vertex> vv1;
@@ -96,15 +96,15 @@ void Assembly::cadCode()
 
 	Part Back;
 
-	// backBase
+	 //backBase
 	Rect backBase(inWidth + (thickness - slotThicknessLoose), height);
 
-	// backTabs
+	 //backTabs
 	TopoDS_Shape backTab = tab(tabWidth, slotLength, slotThicknessLoose, slotLength/3);
 	std::vector<vec> backTabsLocs;
 	for (int i = 0; i < tabs; i++) {
 		float x = backBase.w / 2;
-		float ySpacing = (sideHeight - slotLength * 2.5) / (tabs - 1);
+		float ySpacing = (sideHeight - slotLength * 2.5f) / (tabs - 1);
 		float y = -backBase.h / 2 + slotLength / 2 + i * ySpacing;
 		backTabsLocs.push_back(vec(x, y));
 
@@ -112,13 +112,13 @@ void Assembly::cadCode()
 		args.Append(backTabMoved);
 		args.Append(mirror(backTabMoved, vec(1, 0, 0)));
 
-		Back.addJoint("tab" + std::to_string(i), x + slotThicknessLoose / 2, y + slotLength/3, thickness / 2, -90);
-		Back.addJoint("tab" + std::to_string(i*2), -x - slotThicknessLoose / 2, y + slotLength/3, thickness / 2, -90);
+		Back.addJoint("tab" + std::to_string(i), x + slotThicknessLoose / 2, y + slotLength/3, thickness / 2, -90.f);
+		Back.addJoint("tab" + std::to_string(i*2), -x - slotThicknessLoose / 2, y + slotLength/3, thickness / 2, -90.f);
 	}
 	args.Append(backBase);
 	args.Append(fuse(&args));
 
-	// backSlots
+	 //backSlots
 	Rect backSlot(pinLength, slotThicknessLoose);
 	std::vector<vec> backSlotsLocs;
 	for (int i = 0; i < levels; i++) {
@@ -163,6 +163,7 @@ void Assembly::cadCode()
 		backFace = fillet(backFace, vv1, 1);
 		backFace = fillet(backFace, vv2, thickness);
 		backFace = fillet(backFace, vv30, thickness);
+		//fillet2(backFace, vv2, thickness);
 	}
 
 	Back.shape = extrude(backFace, thickness);
@@ -172,12 +173,14 @@ void Assembly::cadCode()
 #pragma region Lateral
 
 	Part Lateral;
+	std::vector<TopoDS_Vertex> vv1;
+	std::vector<TopoDS_Vertex> lateralVv2;
 
 	// lateralBase
-	Rect lateralBase(depth, sideHeight, Align::lh);
-	args.Append(lateralBase);
+	Rect lateralBaseRect(depth, sideHeight, Align::lh);
+	args.Append(lateralBaseRect);
 
-	Rect lateralStraightRect(topShelfDepth + tabWidth + thickness, lateralBase.h, Align::lh);
+	Rect lateralStraightRect(topShelfDepth + tabWidth + thickness, lateralBaseRect.h, Align::lh);
 
 	// lateralElipseEdge
 	Ellipse ellipse(depth - lateralStraightRect.w, sideHeight, -lateralStraightRect.w);
@@ -185,8 +188,12 @@ void Assembly::cadCode()
 	args.Append(intersect(&args, &tools));
 
 	args.Append(lateralStraightRect);
-	args.Append(fuse(&args));
+	TopoDS_Shape lateralBase(fuse(&args));
 
+	std::vector<TopoDS_Vertex> lateralBaseVv = vertices(lateralBase);
+	//lateralVv2.insert(lateralVv2.end(), lateralBaseVv.begin(), lateralBaseVv.end());
+	lateralVv2.push_back(lateralBaseVv[1]); //need a new method for fillet ellipses with chfi2d
+	args.Append(lateralBase);
 
 	// lateralBackSlots
 	for (int i = 0; i < backTabsLocs.size(); i++) {
@@ -213,15 +220,15 @@ void Assembly::cadCode()
 
 		if (i != levels - 1) {
 			slotX = -lateralStraightRect.w - ellipse.getRadAtY(slotY + slotLength) + slotW / 2 + spacing;
-			float x1 = abs(slotX) - thickness / 2;
-			float x2 = abs(Lateral.joints["backSlot0"].local.TranslationPart().X()) + thickness/2 ;
-			slideW = abs(slideX) - tabWidth - thickness - (x1-x2)/2;
+			float x1 = -slotX - thickness / 2;
+			float x2 = float(- Lateral.joints["backSlot0"].local.TranslationPart().X() + thickness / 2);
+			slideW = -slideX - tabWidth - thickness - (x1-x2)/2;
 		}
 		else {
 			slotX = -lateralStraightRect.w + slotW / 2;
-			float x1 = abs(slotX) - thickness / 2;
-			float x2 = abs(Lateral.joints["backSlot0"].local.TranslationPart().X()) + thickness / 2;
-			slideW = abs(slideX) - tabWidth - thickness - (x1 - x2) / 2;
+			float x1 = -slotX - thickness / 2;
+			float x2 = float(- Lateral.joints["backSlot0"].local.TranslationPart().X() + thickness / 2);
+			slideW = -slideX - tabWidth - thickness - (x1 - x2) / 2;
 		}
 
 		tools.Append(Rect(slideW*2, slideH, slideX, slideY));
@@ -239,20 +246,26 @@ void Assembly::cadCode()
 		);
 	}
 
-	TopoDS_Shape lateralFace = fusecut(&args, &tools);
-	args.Clear();
-	tools.Clear();
+	TopoDS_Shape lateralShape = fusecut(&args, &tools);
 
-	Lateral.shape = extrude(lateralFace, thickness);
+	if (doFillet) {
+		//auto gx = groupBy(vertices(backFace), Axis::x);
+		//auto gy = groupBy(vertices(backFace), Axis::y);
+
+		//lateralShape = fillet(lateralShape, lateralVv2, thickness);
+		//fillet2(lateralShape, lateralVv2, thickness);
+	}
+
+	Lateral.shape = extrude(lateralShape, thickness);
 
 #pragma endregion
 
 #pragma region Shelves
-
+	
 	std::vector<Part> shelves;
 	for (int i = 0; i < levels; i++) {
-		float x1 = abs(Lateral.joints["frontSlot" + std::to_string(i)].global.TranslationPart().X()) - thickness/2;
-		float x2 = abs(Lateral.joints["backSlot0"].global.TranslationPart().X()) + thickness/2;
+		float x1 = float(- Lateral.joints["frontSlot" + std::to_string(i)].global.TranslationPart().X() - thickness / 2);
+		float x2 = float(- Lateral.joints["backSlot0"].global.TranslationPart().X() + thickness / 2);
 		float shelfDepth = x1 - x2 ;
 		shelves.push_back(shelf(shelfDepth));
 	}
@@ -342,15 +355,14 @@ void Assembly::cadCode()
 		fronts[i].connect(fronts[i].joints["tab0"], Lateral1.joints["frontSlot" + std::to_string(i)]);
 	}
 
-	//Back.rotate(45, 0, 90);
-
 #pragma endregion
 
-	//parts.push_back(Lateral1);
+	parts.push_back(Lateral1);
 	parts.push_back(Lateral2);
 	parts.push_back(Back);
 	for (int i = 0; i < levels; i++) {
 		parts.push_back(shelves[i]);
 		parts.push_back(fronts[i]);
 	}
+	//parts.push_back(lateralShape);
 }

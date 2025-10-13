@@ -1,5 +1,6 @@
 // Copyright (c) 2025 Kirill Gavrilov
 // This file is based on original code licensed under the MIT License.
+// https://github.com/gkv311/occt-samples-qopenglwidget
 
 #ifndef _OcctQWidgetViewer_HeaderFile
 #define _OcctQWidgetViewer_HeaderFile

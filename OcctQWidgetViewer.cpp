@@ -1,5 +1,7 @@
 // Copyright (c) 2025 Kirill Gavrilov
 // This file is based on original code licensed under the MIT License.
+// https://github.com/gkv311/occt-samples-qopenglwidget
+
 #pragma once
 
 #ifdef _WIN32
@@ -137,7 +139,7 @@ void OcctQWidgetViewer::displayAssembly(Assembly assembly) {
 
 	myContext->RemoveAll(false);
 
-    int parts = assembly.parts.size();
+    int parts = int(assembly.parts.size());
 
     for (int i = 0; i < parts; i++) {
         Handle(AIS_Shape) shape = new AIS_Shape(assembly.parts[i].Shape());
