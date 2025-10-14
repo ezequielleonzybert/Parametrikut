@@ -30,6 +30,8 @@
 #include <gp_Elips.hxx>
 #include <unordered_set>
 #include <unordered_map>
+#include <ChFi2d_FilletAPI.hxx>
+#include <ShapeAnalysis.hxx>
 
 inline TopTools_ListOfShape args;
 inline TopTools_ListOfShape tools;
@@ -354,6 +356,18 @@ inline bool equal(float a, float b, float tolerance = 1e-6f) {
 	return std::fabs(a - b) < tolerance;
 }
 
+inline float distFast(const gp_Pnt& a, const gp_Pnt& b) {
+	float dx = a.X() - b.X();
+	float dy = a.Y() - b.Y();
+	float dz = a.Z() - b.Z();
+	return dx * dx + dy * dy + dz * dz;
+}
+
+inline bool samePoint(const gp_Pnt& a, const gp_Pnt& b) {
+	float tolerance = 1.0E-5;
+	return distFast(a, b) < tolerance;
+}
+
 inline TopoDS_Shape translate(TopoDS_Shape shape, vec v) {
 	gp_Trsf tr;
 	tr.SetTranslation(gp_Vec(v.x, v.y, v.z));
@@ -476,6 +490,197 @@ inline TopoDS_Shape fillet(TopoDS_Shape shape, std::vector<TopoDS_Vertex> vv, fl
 		makeFillet.AddFillet(v, r);
 	}
 	return makeFillet.Shape();
+}
+
+inline void fillet2(TopoDS_Shape& shape, std::vector<TopoDS_Vertex> vv, float r) {
+
+	// getting outer wire
+	TopoDS_Wire outerWire;
+
+	for (TopExp_Explorer expFace(shape, TopAbs_FACE); expFace.More(); expFace.Next()) {
+		TopoDS_Face face = TopoDS::Face(expFace.Current());
+		TopoDS_Wire outer = ShapeAnalysis::OuterWire(face);
+		outerWire = outer;
+	}
+
+	//TopTools_ListOfShape outerResult;
+	//std::vector<TopTools_ListOfShape*> innerResults;
+	TopTools_IndexedMapOfShape outerResultMap;
+	std::vector<TopTools_IndexedMapOfShape> innerResultsMap;
+	std::vector<int> filletedIndexes;
+	std::vector<int> notFilletedIndexes;
+
+	// iterating shape wires
+	TopExp_Explorer expWire(shape, TopAbs_WIRE);
+	while (expWire.More()) {
+
+		ChFi2d_FilletAPI filletApi;
+		//TopTools_ListOfShape *innerResult = new TopTools_ListOfShape();
+		TopTools_IndexedMapOfShape innerResultMap;
+
+		// iterating target vertices
+		for (int i = 0; i < vv.size(); i++) {
+
+			TopoDS_Edge pair[2];
+			gp_Pnt pTarget = BRep_Tool::Pnt(vv[i]);
+			int j = 0;
+			TopoDS_Edge edge;
+			TopExp_Explorer expEdge(expWire.Current(), TopAbs_EDGE);
+
+			// iterating wire edges
+			while (expEdge.More()) {
+
+				edge = TopoDS::Edge(expEdge.Current());
+				gp_Pnt pfEdge = BRep_Tool::Pnt(TopExp::FirstVertex(edge));
+				gp_Pnt plEdge = BRep_Tool::Pnt(TopExp::LastVertex(edge));
+				float tol = 1.0E-5;
+
+				// target vertex and any edge end coincide?
+				if (distFast(pTarget, pfEdge) < tol || distFast(pTarget, plEdge) < tol) {
+
+					pair[j] = edge;
+					j++;
+
+					if (j == 2) {
+						filletApi.Init(pair[0], pair[1], gp_Pln(0, 0, 1, 0));
+						filletApi.Perform(r);
+						if (expWire.Current().IsEqual(outerWire)) {
+							outerResultMap.Add(filletApi.Result(pTarget, pair[0], pair[1]));
+							outerResultMap.Add(pair[0]);
+							outerResultMap.Add(pair[1]);
+						}
+						else {
+							innerResultMap.Add(filletApi.Result(pTarget, pair[0], pair[1]));
+							innerResultMap.Add(pair[0]);
+							innerResultMap.Add(pair[1]);
+						}
+						break;
+					}
+				}
+				else {
+					if (expWire.Current().IsEqual(outerWire))
+						outerResultMap.Add(edge);
+					//notFilletedIndexes.push_back({outer,2});
+					else {
+						innerResultMap.Add(edge);
+						notFilletedIndexes.push_back({ innerResultMap.FindIndex(edge) });
+					}
+				}
+				expEdge.Next();
+			}
+		}
+		if (!expWire.Current().IsEqual(outerWire))
+			//innerResults.push_back(innerResult);
+			innerResultsMap.push_back(innerResultMap);
+		expWire.Next();
+	}
+
+	//BRepBuilderAPI_MakeWire mkOWire;
+	//mkOWire.Add(outerResult);
+	//if (!mkOWire.IsDone()) {
+	//	return;
+	//}
+
+	//BRepBuilderAPI_MakeFace mkFace(mkOWire.Wire());
+	//if (!mkFace.IsDone()) {
+	//	return;
+	//}
+
+	//for (int i = 0; i < innerResults.size(); i++) {
+	//	BRepBuilderAPI_MakeWire mkIWire;
+	//	mkIWire.Add(*innerResults[i]);
+	//	if (mkIWire.IsDone()) {
+	//		mkFace.Add(mkIWire.Wire());
+	//	}
+	//}
+
+	//shape = mkFace.Shape();
+
+	//for (auto p : innerResults)
+	//	delete p;
+	//innerResults.clear();
+}
+
+inline void fillet3(TopoDS_Shape& shape, std::vector<TopoDS_Vertex> vv, float r) {
+
+	std::vector<std::vector<TopoDS_Edge>> edges;
+	for (TopExp_Explorer expWire(shape, TopAbs_WIRE); expWire.More(); expWire.Next()) {
+		std::vector<TopoDS_Edge> edge;
+		for (TopExp_Explorer expEdge(expWire.Current(), TopAbs_EDGE); expEdge.More(); expEdge.Next()) {
+			edge.push_back(TopoDS::Edge(expEdge.Current()));
+		}
+		edges.push_back(edge);
+	}
+
+	TopoDS_Edge pair[2];
+	std::vector<TopoDS_Edge*> toDelete;
+	std::vector<std::vector<TopoDS_Edge>> results;
+
+	for (int i = 0; i < vv.size(); i++) {
+		for (int j = 0; j < edges.size(); j++) {
+			std::vector<TopoDS_Edge> result;
+			int count = 0;
+			for (int k = 0; k < edges[j].size(); k++) {
+
+				gp_Pnt pTarget = BRep_Tool::Pnt(vv[i]);
+				gp_Pnt pFirst = BRep_Tool::Pnt(TopExp::FirstVertex(edges[j][k]));
+				gp_Pnt pLast = BRep_Tool::Pnt(TopExp::LastVertex(edges[j][k]));
+
+				if (samePoint(pTarget, pFirst) || samePoint(pTarget, pLast)) {
+
+					pair[count] = edges[j][k];
+
+					// Don't duplicate same edge in toDelete:
+					bool duplicated = false;
+					for (auto ptr : toDelete) {
+						if (ptr == &edges[j][k]) {
+							duplicated = true;
+							break;
+						}
+					}
+					if (!duplicated)
+						toDelete.push_back(&edges[j][k]);
+
+					count++;
+					if (count == 2) {
+						ChFi2d_FilletAPI filletApi(pair[0], pair[1], gp_Pln(0, 0, 1, 0));
+						filletApi.Perform(r);
+						result.push_back(filletApi.Result(pTarget, pair[0], pair[1]));
+						result.push_back(pair[0]);
+						result.push_back(pair[1]);
+						break;
+					}
+				}
+			}
+			results.push_back(result);
+		}
+	}
+
+	// Erase original edges that have now a modified replacement in "results"
+	for (int i = 0; i < edges.size(); i++) {
+		for (int j = 0; j < edges[i].size(); j++) {
+			for (auto ptr : toDelete) {
+				if (ptr == &edges[i][j]) {
+					edges[i].erase(edges[i].begin() + j);
+					j--;
+					break;
+				}
+			}
+		}
+	}
+
+	// Combine resultant edges with original not modified edges
+	std::vector<TopoDS_Wire> wires;
+	BRepBuilderAPI_MakeWire mkWire;
+	for (int i = 0; i < edges.size(); i++) {
+		for(int j = 0; j < edges[i].size(); j++) {
+			mkWire.Add(edges[i][j]);
+		}
+		for (int j = 0; j < results[i].size(); j++) {
+			mkWire.Add(results[i][j]);
+		}
+		wires.push_back(TopoDS::Wire(mkWire.Shape()));
+	}
 }
 
 inline std::vector<std::vector<TopoDS_Vertex>> groupBy(std::vector<TopoDS_Vertex> vv, Axis axis) {

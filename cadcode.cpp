@@ -174,7 +174,7 @@ void Assembly::cadCode()
 
 	Part Lateral;
 	std::vector<TopoDS_Vertex> vv1;
-	std::vector<TopoDS_Vertex> lateralVv2;
+	std::vector<TopoDS_Vertex> lateralVV2;
 
 	// lateralBase
 	Rect lateralBaseRect(depth, sideHeight, Align::lh);
@@ -190,9 +190,11 @@ void Assembly::cadCode()
 	args.Append(lateralStraightRect);
 	TopoDS_Shape lateralBase(fuse(&args));
 
-	std::vector<TopoDS_Vertex> lateralBaseVv = vertices(lateralBase);
-	//lateralVv2.insert(lateralVv2.end(), lateralBaseVv.begin(), lateralBaseVv.end());
-	lateralVv2.push_back(lateralBaseVv[1]); //need a new method for fillet ellipses with chfi2d
+	std::vector<TopoDS_Vertex> lateralBaseVV = vertices(lateralBase);
+	//lateralVV2.insert(lateralVV2.end(), lateralBaseVV.begin(), lateralBaseVV.end());
+	//lateralVV2.push_back(lateralBaseVV[0]);
+	lateralVV2.push_back(lateralBaseVV[1]);
+	//lateralVV2.push_back(lateralBaseVV[2]);
 	args.Append(lateralBase);
 
 	// lateralBackSlots
@@ -251,9 +253,8 @@ void Assembly::cadCode()
 	if (doFillet) {
 		//auto gx = groupBy(vertices(backFace), Axis::x);
 		//auto gy = groupBy(vertices(backFace), Axis::y);
-
 		//lateralShape = fillet(lateralShape, lateralVv2, thickness);
-		//fillet2(lateralShape, lateralVv2, thickness);
+		fillet3(lateralShape, lateralVV2, thickness);
 	}
 
 	Lateral.shape = extrude(lateralShape, thickness);
@@ -357,12 +358,12 @@ void Assembly::cadCode()
 
 #pragma endregion
 
-	parts.push_back(Lateral1);
-	parts.push_back(Lateral2);
-	parts.push_back(Back);
-	for (int i = 0; i < levels; i++) {
-		parts.push_back(shelves[i]);
-		parts.push_back(fronts[i]);
-	}
-	//parts.push_back(lateralShape);
+	//parts.push_back(Lateral1);
+	//parts.push_back(Lateral2);
+	//parts.push_back(Back);
+	//for (int i = 0; i < levels; i++) {
+	//	parts.push_back(shelves[i]);
+	//	parts.push_back(fronts[i]);
+	//}
+	parts.push_back(lateralShape);
 }
