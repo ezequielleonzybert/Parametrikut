@@ -193,8 +193,8 @@ void Assembly::cadCode()
 	std::vector<TopoDS_Vertex> lateralBaseVV = vertices(lateralBase);
 	//lateralVV2.insert(lateralVV2.end(), lateralBaseVV.begin(), lateralBaseVV.end());
 	//lateralVV2.push_back(lateralBaseVV[0]);
-	lateralVV2.push_back(lateralBaseVV[1]);
-	//lateralVV2.push_back(lateralBaseVV[2]);
+	//lateralVV2.push_back(lateralBaseVV[1]);
+	lateralVV2.push_back(lateralBaseVV[2]);
 	args.Append(lateralBase);
 
 	// lateralBackSlots
