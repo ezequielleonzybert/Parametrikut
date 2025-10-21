@@ -10,6 +10,8 @@ Push the finished parts to the "parts" vector so the viewer can show them.
 #include "OcctUtils.h"
 
 bool doFillet = true;
+TopTools_ListOfShape args;
+TopTools_ListOfShape tools;
 
 Part Assembly::shelf(float d) {
 
@@ -96,11 +98,13 @@ void Assembly::cadCode()
 
 	Part Back;
 
-	 //backBase
+	// backBase
 	Rect backBase(inWidth + (thickness - slotThicknessLoose), height);
+	args.Append(backBase);
 
-	 //backTabs
+	// backTabs
 	TopoDS_Shape backTab = tab(tabWidth, slotLength, slotThicknessLoose, slotLength/3);
+	//args.Append(backTab);
 	std::vector<vec> backTabsLocs;
 	for (int i = 0; i < tabs; i++) {
 		float x = backBase.w / 2;
@@ -115,10 +119,12 @@ void Assembly::cadCode()
 		Back.addJoint("tab" + std::to_string(i), x + slotThicknessLoose / 2, y + slotLength/3, thickness / 2, -90.f);
 		Back.addJoint("tab" + std::to_string(i*2), -x - slotThicknessLoose / 2, y + slotLength/3, thickness / 2, -90.f);
 	}
-	args.Append(backBase);
-	args.Append(fuse(&args));
 
-	 //backSlots
+	TopoDS_Shape backFace = fuse(&args);
+
+	args.Append(backFace);
+
+	// backSlots
 	Rect backSlot(pinLength, slotThicknessLoose);
 	std::vector<vec> backSlotsLocs;
 	for (int i = 0; i < levels; i++) {
@@ -131,13 +137,13 @@ void Assembly::cadCode()
 		}
 	}
 
-	TopoDS_Shape backFace = cut(&args, &tools);
+	backFace = cut(&args, &tools);
 
 	if (doFillet)
 	{
 		std::vector<TopoDS_Vertex> vv1;
 		std::vector<TopoDS_Vertex> vv2;
-		std::vector<TopoDS_Vertex> vv30;
+		std::vector<TopoDS_Vertex> vvSign;
 
 		auto gx = groupBy(vertices(backFace), Axis::x);
 		auto gy = groupBy(vertices(backFace), Axis::y);
@@ -158,12 +164,11 @@ void Assembly::cadCode()
 		vv2.insert(vv2.end(), gx[0].begin(), gx[0].end());
 		vv2.insert(vv2.end(), gx[gx.size() - 1].begin(), gx[gx.size() - 1].end());
 		vv2.insert(vv2.end(), gy[0].begin(), gy[0].end());
-		vv30.insert(vv30.end(), gy[gy.size() - 1].begin(), gy[gy.size() - 1].end());
+		vvSign.insert(vvSign.end(), gy[gy.size() - 1].begin(), gy[gy.size() - 1].end());
 
 		backFace = fillet(backFace, vv1, 1);
 		backFace = fillet(backFace, vv2, thickness);
-		backFace = fillet(backFace, vv30, thickness);
-		//fillet2(backFace, vv2, thickness);
+		backFace = fillet(backFace, vvSign, thickness);
 	}
 
 	Back.shape = extrude(backFace, thickness);
@@ -191,10 +196,7 @@ void Assembly::cadCode()
 	TopoDS_Shape lateralBase(fuse(&args));
 
 	std::vector<TopoDS_Vertex> lateralBaseVV = vertices(lateralBase);
-	//lateralVV2.insert(lateralVV2.end(), lateralBaseVV.begin(), lateralBaseVV.end());
-	//lateralVV2.push_back(lateralBaseVV[0]);
-	//lateralVV2.push_back(lateralBaseVV[1]);
-	lateralVV2.push_back(lateralBaseVV[2]);
+	lateralVV2.insert(lateralVV2.end(), lateralBaseVV.begin(), lateralBaseVV.end()-1);
 	args.Append(lateralBase);
 
 	// lateralBackSlots
@@ -251,10 +253,9 @@ void Assembly::cadCode()
 	TopoDS_Shape lateralShape = fusecut(&args, &tools);
 
 	if (doFillet) {
-		//auto gx = groupBy(vertices(backFace), Axis::x);
-		//auto gy = groupBy(vertices(backFace), Axis::y);
-		//lateralShape = fillet(lateralShape, lateralVv2, thickness);
-		fillet3(lateralShape, lateralVV2, thickness);
+		auto gx = groupBy(vertices(backFace), Axis::x);
+		auto gy = groupBy(vertices(backFace), Axis::y);
+		lateralShape = fillet(lateralShape, lateralVV2, thickness);
 	}
 
 	Lateral.shape = extrude(lateralShape, thickness);
@@ -358,12 +359,13 @@ void Assembly::cadCode()
 
 #pragma endregion
 
-	//parts.push_back(Lateral1);
-	//parts.push_back(Lateral2);
-	//parts.push_back(Back);
-	//for (int i = 0; i < levels; i++) {
-	//	parts.push_back(shelves[i]);
-	//	parts.push_back(fronts[i]);
-	//}
-	parts.push_back(lateralShape);
+	parts.push_back(Lateral1);
+	parts.push_back(Lateral2);
+	parts.push_back(Back);
+	for (int i = 0; i < levels; i++) {
+		parts.push_back(shelves[i]);
+		parts.push_back(fronts[i]);
+	}
+	//parts.push_back(lateralShape);
+
 }
