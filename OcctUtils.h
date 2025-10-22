@@ -384,6 +384,12 @@ inline bool samePoint(const gp_Pnt& a, const gp_Pnt& b) {
 	return distFast(a, b) < tolerance;
 }
 
+inline TopoDS_Vertex makeVertex(Standard_Real x, Standard_Real y, Standard_Real z = 0) {
+	gp_Pnt p(x, y, z);
+	BRepBuilderAPI_MakeVertex mkVertex(p);
+	return mkVertex.Vertex();
+}
+
 inline TopoDS_Edge deepReverse(const TopoDS_Edge& edge) {
 	Standard_Real f, l;
 	Handle(Geom_Curve) curve = BRep_Tool::Curve(edge, f, l);

@@ -75,6 +75,8 @@ Part Assembly::shelf(Standard_Real d) {
 
 		vv1.push_back(gx[1][1]);
 		vv1.push_back(gx[gx.size() - 2][0]);
+		vv1.push_back(gy[0][0]);
+		vv1.push_back(gy[0][1]);
 		
 		shelfFace = fillet(shelfFace, vv1, 1);
 		shelfFace = fillet(shelfFace, vv2, thickness);
@@ -174,8 +176,7 @@ void Assembly::cadCode()
 #pragma region Lateral
 
 	Part Lateral;
-	std::vector<TopoDS_Vertex> vv1;
-	std::vector<TopoDS_Vertex> lateralVV2;
+	std::vector<TopoDS_Vertex> lateralVV1;
 
 	// lateralBase
 	Rect lateralBaseRect(depth, sideHeight, Align::lh);
@@ -191,8 +192,6 @@ void Assembly::cadCode()
 	args.Append(lateralStraightRect);
 	TopoDS_Shape lateralBase(fuse(&args));
 
-	std::vector<TopoDS_Vertex> lateralBaseVV = vertices(lateralBase);
-	lateralVV2.insert(lateralVV2.end(), lateralBaseVV.begin(), lateralBaseVV.end()-1);
 	args.Append(lateralBase);
 
 	// lateralBackSlots
@@ -218,18 +217,23 @@ void Assembly::cadCode()
 		Standard_Real slotX;
 		Standard_Real slideW;
 
+
+		Standard_Real vx1 = -lateralStraightRect.w - ellipse.getRadAtY(slideY + slideH / 2);
+		Standard_Real vy1 = slideY + slideH / 2;
+		Standard_Real vx2 = -lateralStraightRect.w - ellipse.getRadAtY(slideY - slideH / 2);
+		Standard_Real vy2 = slideY - slideH / 2;
+		lateralVV1.push_back(makeVertex(vx1, vy1));
+		lateralVV1.push_back(makeVertex(vx2, vy2));
+
 		if (i != levels - 1) {
 			slotX = -lateralStraightRect.w - ellipse.getRadAtY(slotY + slotLength) + slotW / 2 + spacing;
-			Standard_Real x1 = -slotX - thickness / 2;
-			Standard_Real x2 = Standard_Real(- Lateral.joints["backSlot0"].local.TranslationPart().X() + thickness / 2);
-			slideW = -slideX - tabWidth - thickness - (x1-x2)/2;
 		}
 		else {
 			slotX = -lateralStraightRect.w + slotW / 2;
-			Standard_Real x1 = -slotX - thickness / 2;
-			Standard_Real x2 = Standard_Real(- Lateral.joints["backSlot0"].local.TranslationPart().X() + thickness / 2);
-			slideW = -slideX - tabWidth - thickness - (x1 - x2) / 2;
 		}
+		Standard_Real x1 = -slotX - thickness / 2;
+		Standard_Real x2 = Standard_Real(-Lateral.joints["backSlot0"].local.TranslationPart().X() + thickness / 2);
+		slideW = -slideX - tabWidth - thickness - (x1 - x2) / 2;
 
 		tools.Append(Rect(slideW*2, slideH, slideX, slideY));
 		tools.Append(Rect(slotW, slotH, slotX, slotY, Align::ch));
@@ -249,9 +253,15 @@ void Assembly::cadCode()
 	TopoDS_Shape lateralShape = fusecut(&args, &tools);
 
 	if (doFillet) {
+		std::vector<TopoDS_Vertex> lateralBaseVV = vertices(lateralBase);
+		std::vector<TopoDS_Vertex> lateralVV2;
+
+		lateralVV2.insert(lateralVV2.end(), lateralBaseVV.begin(), lateralBaseVV.end() - 1);
+
 		auto gx = groupBy(vertices(backFace), Axis::x);
 		auto gy = groupBy(vertices(backFace), Axis::y);
 		lateralShape = fillet(lateralShape, lateralVV2, thickness);
+		lateralShape = fillet(lateralShape, lateralVV1, 1);
 	}
 
 	Lateral.shape = extrude(lateralShape, thickness);
