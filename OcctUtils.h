@@ -62,16 +62,16 @@ enum class Align {
 };
 
 struct vec {
-	float x;
-	float y;
-	float z;
+	Standard_Real x;
+	Standard_Real y;
+	Standard_Real z;
 	vec() :
 		x(0), y(0), z(0) {
 	}
-	vec(float x, float y, float z = 0) :
+	vec(Standard_Real x, Standard_Real y, Standard_Real z = 0) :
 		x(x), y(y), z(z) {
 	}
-	void set(float x, float y, float z = 0) {
+	void set(Standard_Real x, Standard_Real y, Standard_Real z = 0) {
 		this->x = x;
 		this->y = y;
 		this->z = z;
@@ -82,7 +82,7 @@ class Triangle {
 public:
 	TopoDS_Face face;
 	TopoDS_Shape shape;
-	Triangle(float height, float width, float x = 0, float y = 0) {
+	Triangle(Standard_Real height, Standard_Real width, Standard_Real x = 0, Standard_Real y = 0) {
 		gp_Pnt p1(-width / 2 + x, y, 0);
 		gp_Pnt p2(width / 2 + x, y, 0);
 		gp_Pnt p3(x, height + y, 0);
@@ -104,7 +104,7 @@ public:
 class Rect {
 
 public:
-	float w, h, x, y;
+	Standard_Real w, h, x, y;
 	TopoDS_Shape shape;
 	TopoDS_Face face;
 	TopoDS_Wire wire;
@@ -115,8 +115,8 @@ private:
 
 	void RectAlgo() {
 
-		float xo = x;
-		float yo = y;
+		Standard_Real xo = x;
+		Standard_Real yo = y;
 
 		switch (align) {
 		case Align::cc:
@@ -165,12 +165,12 @@ private:
 
 public:
 
-	Rect(float w, float h, float x = 0, float y = 0, Align align = Align::cc) :
+	Rect(Standard_Real w, Standard_Real h, Standard_Real x = 0, Standard_Real y = 0, Align align = Align::cc) :
 		w(w), h(h), x(x), y(y), align(align)
 	{
 		RectAlgo();
 	}
-	Rect(float w, float h, Align align) :
+	Rect(Standard_Real w, Standard_Real h, Align align) :
 		w(w), h(h), x(0), y(0), align(align)
 	{
 		RectAlgo();
@@ -189,12 +189,12 @@ class Ellipse {
 public:
 	TopoDS_Shape shape;
 	TopoDS_Face face;
-	float w, h, x, y;
+	Standard_Real w, h, x, y;
 	gp_Dir dir = gp_Dir(1, 0, 0);
 
-	Ellipse(float w, float h, float x = 0, float y = 0) : w(w), h(h), x(x), y(y) {
+	Ellipse(Standard_Real w, Standard_Real h, Standard_Real x = 0, Standard_Real y = 0) : w(w), h(h), x(x), y(y) {
 		if (h > w) {
-			float aux = h;
+			Standard_Real aux = h;
 			h = w;
 			w = aux;
 			dir.SetXYZ(gp_XYZ(0, 1, 0));
@@ -208,7 +208,7 @@ public:
 		shape = BRepBuilderAPI_MakeFace(wire).Shape();
 	};
 
-	float getRadAtY(float y) {
+	Standard_Real getRadAtY(Standard_Real y) {
 		return w * sqrt(1 - (y * y) / (h * h));
 	}
 
@@ -270,7 +270,7 @@ public:
 		return shape;
 	}
 
-	void translate(float x = 0, float y = 0, float z = 0) {
+	void translate(Standard_Real x = 0, Standard_Real y = 0, Standard_Real z = 0) {
 		translateLogic(x, y, z);
 	}
 
@@ -278,11 +278,11 @@ public:
 		translateLogic(coords.X(), coords.Y(), coords.Z());
 	}
 
-	void rotate(float x = 0, float y = 0, float z = 0) {
+	void rotate(Standard_Real x = 0, Standard_Real y = 0, Standard_Real z = 0) {
 		gp_Trsf tr;
-		float a = x * M_PI / 180.0f;
-		float b = y * M_PI / 180.0f;
-		float c = z * M_PI / 180.0f;
+		Standard_Real a = x * M_PI / 180.0f;
+		Standard_Real b = y * M_PI / 180.0f;
+		Standard_Real c = z * M_PI / 180.0f;
 		gp_Quaternion q;
 		q.SetEulerAngles(gp_Extrinsic_XYZ, a, b, c);
 		tr.SetRotationPart(q);
@@ -308,11 +308,11 @@ public:
 		}
 	}
 
-	void addJoint(std::string label, float x, float y, float z = 0, float xr = 0, float yr = 0, float zr = 0) {
+	void addJoint(std::string label, Standard_Real x, Standard_Real y, Standard_Real z = 0, Standard_Real xr = 0, Standard_Real yr = 0, Standard_Real zr = 0) {
 		addJointLogic(label, x, y, z, xr, yr, zr);
 	}
 
-	void addJoint(std::string label, vec pos, float xr = 0, float yr = 0, float zr = 0) {
+	void addJoint(std::string label, vec pos, Standard_Real xr = 0, Standard_Real yr = 0, Standard_Real zr = 0) {
 		addJointLogic(label, pos.x, pos.y, pos.z, xr, yr, zr);
 	}
 
@@ -333,7 +333,7 @@ public:
 	}
 
 private:
-	void translateLogic(float x, float y, float z) {
+	void translateLogic(Standard_Real x, Standard_Real y, Standard_Real z) {
 		gp_Trsf tr;
 		gp_Vec pos(x, y, z);
 		tr.SetTranslationPart(pos);
@@ -350,12 +350,12 @@ private:
 		//}
 	}
 
-	void addJointLogic(std::string label, float x, float y, float z, float xr, float yr, float zr) {
+	void addJointLogic(std::string label, Standard_Real x, Standard_Real y, Standard_Real z, Standard_Real xr, Standard_Real yr, Standard_Real zr) {
 		gp_Trsf tr;
 
-		float a = xr * M_PI / 180.0f;
-		float b = yr * M_PI / 180.0f;
-		float c = zr * M_PI / 180.0f;
+		Standard_Real a = xr * M_PI / 180.0f;
+		Standard_Real b = yr * M_PI / 180.0f;
+		Standard_Real c = zr * M_PI / 180.0f;
 		gp_Quaternion q;
 		q.SetEulerAngles(gp_Extrinsic_XYZ, a, b, c);
 		tr.SetRotationPart(q);
@@ -368,53 +368,20 @@ private:
 	}
 };
 
-inline bool equal(float a, float b, float tolerance = 1e-6f) {
+inline bool equal(Standard_Real a, Standard_Real b, Standard_Real tolerance = 1e-6f) {
 	return std::fabs(a - b) < tolerance;
 }
 
-inline float distFast(const gp_Pnt& a, const gp_Pnt& b) {
-	float dx = a.X() - b.X();
-	float dy = a.Y() - b.Y();
-	float dz = a.Z() - b.Z();
+inline Standard_Real distFast(const gp_Pnt& a, const gp_Pnt& b) {
+	Standard_Real dx = a.X() - b.X();
+	Standard_Real dy = a.Y() - b.Y();
+	Standard_Real dz = a.Z() - b.Z();
 	return dx * dx + dy * dy + dz * dz;
 }
 
 inline bool samePoint(const gp_Pnt& a, const gp_Pnt& b) {
-	float tolerance = 1.0E-5;
+	Standard_Real tolerance = 1.0E-5;
 	return distFast(a, b) < tolerance;
-}
-
-inline TopoDS_Shape translate(TopoDS_Shape shape, vec v) {
-	gp_Trsf tr;
-	tr.SetTranslation(gp_Vec(v.x, v.y, v.z));
-	BRepBuilderAPI_Transform result(shape, tr, true);
-	return result.Shape();
-}
-
-inline TopoDS_Shape mirror(TopoDS_Shape shape, vec dir, vec pnt = vec::vec(0, 0, 0)) {
-	gp_Trsf tr;
-	gp_Ax2 ax(gp_Pnt(pnt.x, pnt.y, pnt.z), gp_Dir(dir.x, dir.y, dir.z));
-	tr.SetMirror(ax);
-	BRepBuilderAPI_Transform result(shape, tr, true);
-	return result.Shape().Reversed();
-}
-
-inline TopoDS_Shape fuse(TopTools_ListOfShape* args) {
-
-	BRepAlgoAPI_Fuse fuse;
-	fuse.SetRunParallel(true);
-	//fuse.SetFuzzyValue(1.0E-1);
-	//the original tolerance was 1e-7 and sometimes the parts didn't collide to each other so they don't fuse
-
-	fuse.SetArguments(*args);
-	fuse.SetTools(*args);
-	fuse.Build();
-	fuse.SimplifyResult();
-	args->Clear();
-
-	TopoDS_Shape shape = fuse.Shape();
-
-	return TopoDS_Shape(shape);
 }
 
 inline TopoDS_Edge deepReverse(const TopoDS_Edge& edge) {
@@ -429,18 +396,15 @@ inline TopoDS_Edge deepReverse(const TopoDS_Edge& edge) {
 	return newEdge;
 }
 
-inline TopoDS_Shape cut(TopTools_ListOfShape* args, TopTools_ListOfShape* tools) {
+inline TopoDS_Edge redrawEdge(const TopoDS_Edge& edge) {
+	Standard_Real f, l;
+	Handle(Geom_Curve) curve = BRep_Tool::Curve(edge, f, l);
+	BRepBuilderAPI_MakeEdge mkEdge(curve, f, l);
+	return mkEdge.Edge();
+}
 
-	BRepAlgoAPI_Cut cut;
-	cut.SetRunParallel(true);
-	cut.SetArguments(*args);
-	cut.SetTools(*tools);
-	cut.Build();
-	cut.SimplifyResult();
-	args->Clear();
-	tools->Clear();
-	TopoDS_Shape shape = cut.Shape();
-	
+inline TopoDS_Shape regenShape(const TopoDS_Shape& shape) {
+
 	TopExp_Explorer expFace(shape, TopAbs_FACE);
 	TopoDS_Face face = TopoDS::Face(expFace.Current());
 
@@ -448,15 +412,20 @@ inline TopoDS_Shape cut(TopTools_ListOfShape* args, TopTools_ListOfShape* tools)
 	std::vector <std::vector<TopoDS_Edge>> wires;
 
 	for (TopExp_Explorer expWire(face, TopAbs_WIRE); expWire.More(); expWire.Next()) {
+
 		std::vector<TopoDS_Edge> wire;
 		for (BRepTools_WireExplorer expEdge(TopoDS::Wire(expWire.Current())); expEdge.More(); expEdge.Next()) {
+
 			TopoDS_Edge newEdge = TopoDS::Edge(expEdge.Current());
 			if (newEdge.Orientation() == TopAbs_REVERSED) {
-				newEdge = deepReverse(newEdge); 
+				newEdge = deepReverse(newEdge);
+			}
+			else {
+				newEdge = redrawEdge(newEdge);
 			}
 			wire.push_back(newEdge);
 		}
-		if (expWire.Current().IsEqual(outerWire)) 
+		if (expWire.Current().IsEqual(outerWire))
 			wires.insert(wires.begin(), wire);
 		else
 			wires.push_back(wire);
@@ -480,6 +449,54 @@ inline TopoDS_Shape cut(TopTools_ListOfShape* args, TopTools_ListOfShape* tools)
 	return mkFace.Shape();
 }
 
+inline TopoDS_Shape translate(TopoDS_Shape shape, vec v) {
+	gp_Trsf tr;
+	tr.SetTranslation(gp_Vec(v.x, v.y, v.z));
+	BRepBuilderAPI_Transform result(shape, tr, true);
+	return result.Shape();
+}
+
+inline TopoDS_Shape mirror(TopoDS_Shape shape, vec dir, vec pnt = vec::vec(0, 0, 0)) {
+	gp_Trsf tr;
+	gp_Ax2 ax(gp_Pnt(pnt.x, pnt.y, pnt.z), gp_Dir(dir.x, dir.y, dir.z));
+	tr.SetMirror(ax);
+	BRepBuilderAPI_Transform result(shape, tr, true);
+	return result.Shape().Reversed();
+}
+
+inline TopoDS_Shape fuse(TopTools_ListOfShape* args) {
+
+	BRepAlgoAPI_Fuse fuse;
+	fuse.SetRunParallel(true);
+	fuse.SetFuzzyValue(1);
+	//the original tolerance was 1e-7 and sometimes the parts didn't collide to each other so they don't fuse
+
+	fuse.SetArguments(*args);
+	fuse.SetTools(*args);
+	fuse.Build();
+	fuse.SimplifyResult();
+	args->Clear();
+
+	TopoDS_Shape shape = fuse.Shape();
+
+	return regenShape(shape);
+}
+
+inline TopoDS_Shape cut(TopTools_ListOfShape* args, TopTools_ListOfShape* tools) {
+
+	BRepAlgoAPI_Cut cut;
+	cut.SetRunParallel(true);
+	cut.SetArguments(*args);
+	cut.SetTools(*tools);
+	cut.Build();
+	cut.SimplifyResult();
+	args->Clear();
+	tools->Clear();
+	TopoDS_Shape shape = cut.Shape();
+	
+	return regenShape(shape);
+}
+
 inline TopoDS_Shape fusecut(TopTools_ListOfShape* args, TopTools_ListOfShape* tools) {
 
 	TopoDS_Shape fused = fuse(args);
@@ -499,10 +516,12 @@ inline TopoDS_Shape intersect(TopTools_ListOfShape* args, TopTools_ListOfShape* 
 	args->Clear();
 	tools->Clear();
 
-	return TopoDS_Shape(common.Shape());
+	TopoDS_Shape shape = common.Shape();
+
+	return regenShape(shape);
 }
 
-inline Part extrude(TopoDS_Shape face, float thickness) {
+inline Part extrude(TopoDS_Shape face, Standard_Real thickness) {
 	TopoDS_Shape p = BRepPrimAPI_MakePrism(face, gp_Vec(0, 0, thickness));
 	return Part(p);
 }
@@ -530,7 +549,7 @@ inline std::vector<TopoDS_Vertex> vertices(const TopoDS_Shape& shape) {
 	return uniqueVertices;
 }
 
-inline TopoDS_Shape filletSimple(TopoDS_Shape shape, std::vector<gp_Pnt> locs, float r) {
+inline TopoDS_Shape filletSimple(TopoDS_Shape shape, std::vector<gp_Pnt> locs, Standard_Real r) {
 	TopExp_Explorer exp(shape, TopAbs_FACE);
 	TopoDS_Face face(TopoDS::Face(exp.Current()));
 	BRepFilletAPI_MakeFillet2d makeFillet(face);
@@ -549,7 +568,7 @@ inline TopoDS_Shape filletSimple(TopoDS_Shape shape, std::vector<gp_Pnt> locs, f
 	return makeFillet.Shape();
 }
 
-inline TopoDS_Shape filletSimple(TopoDS_Shape shape, std::vector<TopoDS_Vertex> vv, float r) {
+inline TopoDS_Shape filletSimple(TopoDS_Shape shape, std::vector<TopoDS_Vertex> vv, Standard_Real r) {
 	TopExp_Explorer exp(shape, TopAbs_FACE);
 	TopoDS_Face face(TopoDS::Face(exp.Current()));
 	BRepFilletAPI_MakeFillet2d makeFillet(face);
@@ -560,9 +579,8 @@ inline TopoDS_Shape filletSimple(TopoDS_Shape shape, std::vector<TopoDS_Vertex> 
 	return makeFillet.Shape();
 }
 
-inline TopoDS_Shape fillet(TopoDS_Shape& shape, std::vector<TopoDS_Vertex> vv, float radius) {
-
-	
+inline TopoDS_Shape fillet(TopoDS_Shape& shape, std::vector<TopoDS_Vertex> vv, Standard_Real radius) {
+		
 	// Generate a vector of vectors with with wires of edges
 	std::vector<std::vector<TopoDS_Edge>> wires;
 	for (TopExp_Explorer expFace(shape, TopAbs_WIRE); expFace.More(); expFace.Next()) {
@@ -570,7 +588,6 @@ inline TopoDS_Shape fillet(TopoDS_Shape& shape, std::vector<TopoDS_Vertex> vv, f
 
 		std::vector<TopoDS_Edge> edges;
 		for (BRepTools_WireExplorer expWire(wire); expWire.More(); expWire.Next()) {
-			//BRepBuilderAPI_MakeEdge edge()
 			TopoDS_Edge edge = TopoDS::Edge(expWire.Current());
 			edges.push_back(edge);
 		}
@@ -603,8 +620,7 @@ inline TopoDS_Shape fillet(TopoDS_Shape& shape, std::vector<TopoDS_Vertex> vv, f
 
 						ChFi2d_FilletAPI filletApi(*e1, *e2, gp_Pln(0, 0, 1, 0));
 						filletApi.Perform(radius);
-						TopoDS_Edge filletedEdge = filletApi.Result(pTarget, *e1, *e2);
-
+						TopoDS_Edge filletedEdge = filletApi.Result(pTarget, *e1, *e2); //DANDO EDGES NUL
 
 						wires[wireIdx].insert(wires[wireIdx].begin() + edgeIdxPair[1], filletedEdge);
 
@@ -616,19 +632,19 @@ inline TopoDS_Shape fillet(TopoDS_Shape& shape, std::vector<TopoDS_Vertex> vv, f
 		}
 	}
 
-	////this is just for testing the edges that are giving problems
+	//this is just for testing the edges that are giving problems
 	//TopoDS_Compound comp;
 	//BRep_Builder builder;
 	//builder.MakeCompound(comp);
-	//for (auto& edge : wires[0]) {
-	//	builder.Add(comp, edge);
+	//for(int i = 0; i < wires[0].size(); i++){
+	//	builder.Add(comp, wires[0][i]);
 	//}
 	//return comp;
 
 	// Build the wires
 	TopoDS_Wire outerWire;
 	std::vector<TopoDS_Wire> innerWires;
-	float lastArea = 0;
+	Standard_Real lastArea = 0;
 	for (int i = 0; i < wires.size(); i++) {
 		BRepBuilderAPI_MakeWire mkWire;
 
@@ -638,7 +654,7 @@ inline TopoDS_Shape fillet(TopoDS_Shape& shape, std::vector<TopoDS_Vertex> vv, f
 
 		// Make wires and Identify the outerWire
 		TopoDS_Wire wire = mkWire.Wire();
-		const float currentArea = ShapeAnalysis::ContourArea(wire);
+		const Standard_Real currentArea = ShapeAnalysis::ContourArea(wire);
 		if (currentArea > lastArea) {
 			lastArea = currentArea;
 			if (!outerWire.IsNull()) {
@@ -749,12 +765,15 @@ inline void sortBy(std::vector<TopoDS_Vertex>& vv, Axis axis) {
 		});
 }
 
-inline TopoDS_Shape tab(float tabWidth, float tabHeight, float slideThickness, float slideLength) {
+inline TopoDS_Shape tab(Standard_Real tabWidth, Standard_Real tabHeight, Standard_Real slideThickness, Standard_Real slideLength, bool turn=false) {
 	TopTools_ListOfShape args;
 	TopTools_ListOfShape tools;
 
-	Rect tabBase(slideThickness + tabWidth, tabHeight, Align::hh);
-	Rect tabCut(slideThickness, slideLength, Align::hh);
+	Align align = Align::hh;
+	if (turn) align = Align::hl;
+
+	Rect tabBase(slideThickness + tabWidth, tabHeight, align);
+	Rect tabCut(slideThickness, slideLength, align);
 
 	args.Append(tabBase);
 	tools.Append(tabCut);

@@ -11,7 +11,7 @@ Assembly::Assembly()
 	slotLength = 30.f;
 	pinLength = slotLength * 1.5f;
 	shelvesSpacing = 100.f;
-	topShelfDepth = 50.f;
+	topShelfDepth = 70.f;
 	signHeight = 50.f;
 
 	levels = 3;
@@ -74,7 +74,7 @@ void Assembly::addParam(const char* name, int vali) {
 	params.push_back(Param(name, vali));
 }
 
-void Assembly::addParam(const char* name, float valf) {
+void Assembly::addParam(const char* name, Standard_Real valf) {
 	params.push_back(Param(name, valf));
 }
 
@@ -87,7 +87,7 @@ int Assembly::getParamVali(const char* name) {
 	return -1;
 }
 
-float Assembly::getParamValf(const char* name) {
+Standard_Real Assembly::getParamValf(const char* name) {
 	for (int i = 0; i < params.size(); i++) {
 		if (strcmp(params[i].name, name) == 0) {
 			return params[i].valf;
