@@ -77,8 +77,12 @@ Part Assembly::shelf(Standard_Real d) {
 		vv1.push_back(gx[gx.size() - 2][0]);
 		vv1.push_back(gy[0][0]);
 		vv1.push_back(gy[0][1]);
+		vv1.push_back(gy[gy.size() - 1][0]);
+		vv1.push_back(gy[gy.size() - 1][1]);
+		vv1.push_back(gy[gy.size() - 1][2]);
+		vv1.push_back(gy[gy.size() - 1][3]);
 		
-		shelfFace = fillet(shelfFace, vv1, 1);
+		shelfFace = fillet(shelfFace, vv1, thickness/3);
 		shelfFace = fillet(shelfFace, vv2, thickness);
 	}
 
@@ -164,7 +168,7 @@ void Assembly::cadCode()
 		vv2.insert(vv2.end(), gy[0].begin(), gy[0].end());
 		vvSign.insert(vvSign.end(), gy[gy.size() - 1].begin(), gy[gy.size() - 1].end());
 
-		backFace = fillet(backFace, vv1, 1);
+		backFace = fillet(backFace, vv1, thickness/3);
 		backFace = fillet(backFace, vv2, thickness);
 		backFace = fillet(backFace, vvSign, thickness);
 	}
@@ -261,7 +265,7 @@ void Assembly::cadCode()
 		auto gx = groupBy(vertices(backFace), Axis::x);
 		auto gy = groupBy(vertices(backFace), Axis::y);
 		lateralShape = fillet(lateralShape, lateralVV2, thickness);
-		lateralShape = fillet(lateralShape, lateralVV1, 1);
+		lateralShape = fillet(lateralShape, lateralVV1, thickness/3);
 	}
 
 	Lateral.shape = extrude(lateralShape, thickness);
@@ -336,7 +340,7 @@ void Assembly::cadCode()
 		vv2.push_back(gx[gx.size() - 1][0]);
 		vv2.push_back(gx[gx.size() - 1][1]);
 
-		frontShape = fillet(frontShape, vv1, 1);
+		frontShape = fillet(frontShape, vv1, thickness/3);
 		frontShape = fillet(frontShape, vv2, thickness);
 
 	}
@@ -347,18 +351,31 @@ void Assembly::cadCode()
 
 #pragma region Assembly
 
+	// Creating parts
 	Part Lateral1(Lateral);
 	Part Lateral2(Lateral);
-
-	Back.rotate(90, 0, 0);
-
-	Lateral1.connect(Lateral1.joints["backSlot1"], Back.joints["tab1"]);
-	Lateral2.connect(Lateral2.joints["backSlot1"], Back.joints["tab2"]);
-
 	std::vector<Part> fronts;
 	for (int i = 0; i < levels; i++)
 	{
 		fronts.push_back(Part(Front));
+	}
+
+	// vector of every part to arrange in the plane and get the section
+	std::vector<Part> packed;
+	packed.push_back(Lateral1);
+	packed.push_back(Lateral2);
+	packed.push_back(Back);
+	packed.insert(packed.end(), fronts.begin(), fronts.end());
+	packed.insert(packed.end(), shelves.begin(), shelves.end());
+
+	// Assembling parts
+	Back.rotate(90, 0, 0);
+
+	Lateral1.connect(Lateral1.joints["backSlot1"], Back.joints["tab1"]);
+	Lateral2.connect(Lateral2.joints["backSlot1"], Back.joints["tab2"]);
+	
+	for (int i = 0; i < levels; i++)
+	{
 		shelves[i].connect(shelves[i].joints["slide0"], Lateral1.joints["slide" + std::to_string(i)]);
 		fronts[i].connect(fronts[i].joints["tab0"], Lateral1.joints["frontSlot" + std::to_string(i)]);
 	}

@@ -624,9 +624,12 @@ inline TopoDS_Shape fillet(TopoDS_Shape& shape, std::vector<TopoDS_Vertex> vv, S
 						TopoDS_Edge* e1 = &wires[wireIdx][edgeIdxPair[0]];
 						TopoDS_Edge* e2 = &wires[wireIdx][edgeIdxPair[1]];
 
+						TopoDS_Edge m1 = *e1;
+						TopoDS_Edge m2 = *e1;//testing
+
 						ChFi2d_FilletAPI filletApi(*e1, *e2, gp_Pln(0, 0, 1, 0));
 						filletApi.Perform(radius);
-						TopoDS_Edge filletedEdge = filletApi.Result(pTarget, *e1, *e2); //DANDO EDGES NUL
+						TopoDS_Edge filletedEdge = filletApi.Result(pTarget, *e1, *e2);
 
 						wires[wireIdx].insert(wires[wireIdx].begin() + edgeIdxPair[1], filletedEdge);
 
@@ -785,4 +788,8 @@ inline TopoDS_Shape tab(Standard_Real tabWidth, Standard_Real tabHeight, Standar
 	tools.Append(tabCut);
 
 	return cut(&args, &tools);
+}
+
+inline TopoDS_Compound pack(std::vector<TopoDS_Shape> shapes) {
+	return TopoDS_Compound();
 }
