@@ -2,7 +2,7 @@
 
 Parametrikut can handle a variety of models designed for laser cutting, allowing users to customize dimensions and features before exporting the plans for fabrication.
 
-![Screenshot](https://github.com/ezequielleonzybert/Parametrikut/blob/master/images/screenshott.jpg?raw=true)
+[Screenshot](images/screenshot.jpg)
 
 ## Requierements
 
