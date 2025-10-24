@@ -361,12 +361,14 @@ void Assembly::cadCode()
 	}
 
 	// vector of every part to arrange in the plane and get the section
-	std::vector<Part> packed;
-	packed.push_back(Lateral1);
-	packed.push_back(Lateral2);
-	packed.push_back(Back);
-	packed.insert(packed.end(), fronts.begin(), fronts.end());
-	packed.insert(packed.end(), shelves.begin(), shelves.end());
+	std::vector<Part> partsList;
+	partsList.push_back(Lateral1);
+	partsList.push_back(Lateral2.mirrored(false));
+	partsList.push_back(Back);
+	partsList.insert(partsList.end(), fronts.begin(), fronts.end());
+	partsList.insert(partsList.end(), shelves.begin(), shelves.end());
+
+	TopoDS_Compound packed = pack(partsList);
 
 	// Assembling parts
 	Back.rotate(90, 0, 0);
@@ -390,4 +392,10 @@ void Assembly::cadCode()
 		parts.push_back(fronts[i]);
 	}
 
+	TopoDS_Shape outlines = section(packed);
+	parts.push_back(outlines);
+
+	Exporter exporter; 
+	exporter.setShape(outlines);
+	exporter.exportToFile("C:\\Users\\Ezequiel\\Desktop\\output.svg");
 }

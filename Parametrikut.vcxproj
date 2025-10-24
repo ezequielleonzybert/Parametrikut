@@ -120,6 +120,7 @@
     <ClCompile Include="cadcode.cpp">
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">NotUsing</PrecompiledHeader>
     </ClCompile>
+    <ClCompile Include="exporter.cpp" />
     <ClCompile Include="OcctQWidgetViewer.cpp">
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">NotUsing</PrecompiledHeader>
     </ClCompile>
@@ -132,6 +133,7 @@
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Assembly.h" />
+    <ClInclude Include="exporter.h" />
     <ClInclude Include="OcctQtTools.h" />
     <ClInclude Include="OcctUtils.h" />
     <ClInclude Include="resource.h" />

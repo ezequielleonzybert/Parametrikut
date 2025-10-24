@@ -35,6 +35,9 @@
     <ClCompile Include="cadcode.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="exporter.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Assembly.h">
@@ -47,6 +50,9 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="resource.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="exporter.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>

@@ -12,17 +12,12 @@
 #include <BRepBuilderAPI_MakeVertex.hxx>
 #include <BRepBuilderAPI_MakePolygon.hxx>
 #include <GC_MakeEllipse.hxx>
-#include <GCE2d_MakeEllipse.hxx>
-#include <BRepBuilderAPI_Sewing.hxx>
 #include <BRepPrimAPI_MakePrism.hxx>
 #include <TopTools_ListOfShape.hxx>
 #include <BRepFilletAPI_MakeFillet2d.hxx>
 #include <TopExp_Explorer.hxx>
 #include <TopTools_IndexedMapOfShape.hxx>
-#include <BRepPrimAPI_MakeBox.hxx> 
 #include <TopoDS.hxx>
-#include <TopoDS_Solid.hxx>
-#include <ShapeUpgrade_UnifySameDomain.hxx>
 #include <BRep_Tool.hxx>
 #include <gp_Pnt.hxx>
 #include <gp_Pln.hxx>
@@ -32,16 +27,12 @@
 #include <unordered_map>
 #include <ChFi2d_FilletAPI.hxx>
 #include <ShapeAnalysis.hxx>
-#include <ShapeFix.hxx>
-#include <ShapeFix_Shape.hxx>
-#include <ShapeFix_Wire.hxx>
-#include <ShapeFix_Face.hxx>
-#include <ShapeFix_EdgeConnect.hxx>
-#include <TopOpeBRepBuild_FuseFace.hxx>
 #include <BRepTools.hxx>
-#include <BRepTools_ReShape.hxx>
-#include <ShapeBuild_ReShape.hxx>
-#include <BRepLib.hxx>
+#include <BRepBndLib.hxx>
+#include <BRepAlgoAPI_Section.hxx>
+#include "exporter.h"
+#include <ShapeFix_Wire.hxx>
+#include <BRepAdaptor_Curve.hxx>
 
 enum class Axis {
 	x,
@@ -295,6 +286,32 @@ public:
 		}
 
 		applyParentTransform(transformation);
+	}
+
+	Part rotated(Standard_Real x = 0, Standard_Real y = 0, Standard_Real z = 0) const {
+		Part r = *this;
+		gp_Trsf tr;
+		Standard_Real a = x * M_PI / 180.0, b = y * M_PI / 180.0, c = z * M_PI / 180.0;
+		gp_Quaternion q; q.SetEulerAngles(gp_Extrinsic_XYZ, a, b, c);
+		tr.SetRotationPart(q);
+		r.shape = r.shape.Located(TopLoc_Location(transformation * tr));
+		for (auto& [label, j] : r.joints)
+			j.global = (transformation * tr) * j.local;
+		r.applyParentTransform(transformation * tr);
+		return r;
+	}
+
+	Part mirrored(bool horizontal = true) const {
+		Part r = *this;
+		gp_Pnt origin = transformation.TranslationPart();
+		gp_Dir normal = horizontal ? gp_Dir(0, 1, 0) : gp_Dir(1, 0, 0);
+		gp_Ax2 ax(origin, normal);
+		gp_Trsf tr; tr.SetMirror(ax);
+		r.shape = r.shape.Located(TopLoc_Location(transformation * tr));
+		for (auto& [label, j] : r.joints)
+			j.global = (transformation * tr) * j.local;
+		r.applyParentTransform(transformation * tr);
+		return r;
 	}
 
 	void applyParentTransform(const gp_Trsf& parentGlobal) {
@@ -624,12 +641,9 @@ inline TopoDS_Shape fillet(TopoDS_Shape& shape, std::vector<TopoDS_Vertex> vv, S
 						TopoDS_Edge* e1 = &wires[wireIdx][edgeIdxPair[0]];
 						TopoDS_Edge* e2 = &wires[wireIdx][edgeIdxPair[1]];
 
-						TopoDS_Edge m1 = *e1;
-						TopoDS_Edge m2 = *e1;//testing
-
 						ChFi2d_FilletAPI filletApi(*e1, *e2, gp_Pln(0, 0, 1, 0));
 						filletApi.Perform(radius);
-						TopoDS_Edge filletedEdge = filletApi.Result(pTarget, *e1, *e2);
+						TopoDS_Edge filletedEdge = filletApi.Result(pTarget, *e1, *e2); 
 
 						wires[wireIdx].insert(wires[wireIdx].begin() + edgeIdxPair[1], filletedEdge);
 
@@ -790,6 +804,120 @@ inline TopoDS_Shape tab(Standard_Real tabWidth, Standard_Real tabHeight, Standar
 	return cut(&args, &tools);
 }
 
-inline TopoDS_Compound pack(std::vector<TopoDS_Shape> shapes) {
-	return TopoDS_Compound();
+inline Bnd_Box getBB(TopoDS_Shape shape) {
+	Bnd_Box bb;
+	BRepBndLib::AddClose(shape, bb);
+	return bb;
+}
+
+inline TopoDS_Compound pack(std::vector<Part> p, Standard_Real margin = 10) {
+	BRep_Builder b; TopoDS_Compound c; b.MakeCompound(c);
+	int n = p.size(); if (!n)return c;
+	int cols = ceil(sqrt(n)), rows = ceil((Standard_Real)n / cols);
+	std::vector<Bnd_Box> bb(n); for (int i = 0; i < n; i++)bb[i] = getBB(p[i].shape);
+	std::vector<Standard_Real> cw(cols, 0), rh(rows, 0);
+	for (int i = 0; i < n; i++) {
+		Standard_Real x0, y0, z0, x1, y1, z1; bb[i].Get(x0, y0, z0, x1, y1, z1);
+		cw[i % cols] = (std::max)(cw[i % cols], x1 - x0); rh[i / cols] = (std::max)(rh[i / cols], y1 - y0);
+	}
+	Standard_Real y = 0; for (int r = 0; r < rows; r++) {
+		Standard_Real x = 0;
+		for (int cIdx = 0; cIdx < cols; cIdx++) {
+			int i = r * cols + cIdx; if (i >= n)break;
+			Standard_Real x0, y0, z0, x1, y1, z1; bb[i].Get(x0, y0, z0, x1, y1, z1);
+			gp_Trsf t; t.SetTranslation(gp_Vec(-x0 + x, -y0 + y, 0));
+			b.Add(c, BRepBuilderAPI_Transform(p[i].shape, t).Shape());
+			x += cw[cIdx] + margin;
+		}y += rh[r] + margin;
+	}
+	return c;
+}
+
+#include <BRepBuilderAPI_MakeWire.hxx>
+#include <ShapeFix_Wire.hxx>
+#include <BRep_Builder.hxx>
+#include <TopExp_Explorer.hxx>
+#include <TopoDS_Compound.hxx>
+#include <TopoDS_Wire.hxx>
+#include <TopoDS_Edge.hxx>
+#include <BRepAlgoAPI_Section.hxx>
+#include <BRep_Tool.hxx>
+#include <BRepAdaptor_Curve.hxx>
+#include <gp_Pln.hxx>
+#include <gp_Pnt.hxx>
+#include <vector>
+
+inline TopoDS_Shape section(const TopoDS_Shape& shape, double z = 1.0) {
+	gp_Pln plane(gp_Pnt(0, 0, z), gp_Dir(0, 0, 1));
+	BRepAlgoAPI_Section sec(shape, plane, Standard_False);
+	sec.ComputePCurveOn1(Standard_True);
+	sec.Build();
+	TopoDS_Shape sectionShape = sec.Shape();
+
+	// Recopilar todos los edges
+	std::vector<TopoDS_Edge> edges;
+	for (TopExp_Explorer exp(sectionShape, TopAbs_EDGE); exp.More(); exp.Next()) {
+		edges.push_back(TopoDS::Edge(exp.Current()));
+	}
+
+	// Agrupar edges conectados
+	std::vector<std::vector<TopoDS_Edge>> groups;
+	std::vector<bool> used(edges.size(), false);
+
+	for (size_t i = 0; i < edges.size(); ++i) {
+		if (used[i]) continue;
+		std::vector<TopoDS_Edge> group;
+		group.push_back(edges[i]);
+		used[i] = true;
+		bool added;
+
+		do {
+			added = false;
+			for (size_t j = 0; j < edges.size(); ++j) {
+				if (used[j]) continue;
+
+				// Obtener puntos extremos del último edge del grupo
+				Standard_Real f1, l1;
+				Handle(Geom_Curve) c1 = BRep_Tool::Curve(group.back(), f1, l1);
+				if (c1.IsNull()) continue;
+				gp_Pnt p1 = c1->Value(f1);
+				gp_Pnt p2 = c1->Value(l1);
+
+				// Obtener puntos extremos del edge candidato
+				Standard_Real f2, l2;
+				Handle(Geom_Curve) c2 = BRep_Tool::Curve(edges[j], f2, l2);
+				if (c2.IsNull()) continue;
+				gp_Pnt q1 = c2->Value(f2);
+				gp_Pnt q2 = c2->Value(l2);
+
+				// Verificar si se conectan por algún extremo
+				if (p1.IsEqual(q1, 1e-6) || p1.IsEqual(q2, 1e-6) ||
+					p2.IsEqual(q1, 1e-6) || p2.IsEqual(q2, 1e-6)) {
+					group.push_back(edges[j]);
+					used[j] = true;
+					added = true;
+				}
+			}
+		} while (added);
+
+		groups.push_back(group);
+	}
+
+	// Construir compound de wires
+	BRep_Builder builder;
+	TopoDS_Compound result;
+	builder.MakeCompound(result);
+
+	for (auto& grp : groups) {
+		BRepBuilderAPI_MakeWire wireMaker;
+		for (auto& e : grp) wireMaker.Add(e);
+		if (wireMaker.IsDone()) {
+			ShapeFix_Wire sfx;
+			sfx.Load(wireMaker.Wire());
+			sfx.Perform();
+			builder.Add(result, sfx.Wire());
+		}
+	}
+
+	return result;
 }
