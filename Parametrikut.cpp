@@ -1,8 +1,10 @@
 #include "Parametrikut.h"
+#include "exporter.h"  
 #include <QRegularExpression>
 #include <QRegularExpressionValidator>
 #include <QString>
 #include <QLabel>
+#include <QFileDialog>
 
 Parametrikut::Parametrikut(QWidget *parent)
     : QMainWindow(parent)
@@ -53,6 +55,19 @@ Parametrikut::Parametrikut(QWidget *parent)
             background-color: #ffffff;
         } 
     )");
+
+    connect(btnExport, &QPushButton::clicked, this, [this]() {
+        QString filePath = QFileDialog::getSaveFileName(
+            this,
+            "Export to SVG",
+            QDir::homePath(),
+            "SVG Files (*.svg);;All Files (*)"
+        );
+
+        Exporter exporter;
+        exporter.add(assembly->outlines);
+        exporter.exportToFile(filePath);
+    });
 }
 
 void Parametrikut::buildGrid(std::vector<Param> &params) {
