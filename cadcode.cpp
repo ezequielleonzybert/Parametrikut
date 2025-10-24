@@ -392,10 +392,10 @@ void Assembly::cadCode()
 		parts.push_back(fronts[i]);
 	}
 
-	TopoDS_Shape outlines = section(packed);
-	parts.push_back(outlines);
+	std::vector<TopoDS_Wire> outlines = section(packed);
+	for(auto& w : outlines)	parts.push_back(w);
 
 	Exporter exporter; 
-	exporter.setShape(outlines);
+	exporter.add(outlines);
 	exporter.exportToFile("C:\\Users\\Ezequiel\\Desktop\\output.svg");
 }

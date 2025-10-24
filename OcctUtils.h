@@ -833,21 +833,7 @@ inline TopoDS_Compound pack(std::vector<Part> p, Standard_Real margin = 10) {
 	return c;
 }
 
-#include <BRepBuilderAPI_MakeWire.hxx>
-#include <ShapeFix_Wire.hxx>
-#include <BRep_Builder.hxx>
-#include <TopExp_Explorer.hxx>
-#include <TopoDS_Compound.hxx>
-#include <TopoDS_Wire.hxx>
-#include <TopoDS_Edge.hxx>
-#include <BRepAlgoAPI_Section.hxx>
-#include <BRep_Tool.hxx>
-#include <BRepAdaptor_Curve.hxx>
-#include <gp_Pln.hxx>
-#include <gp_Pnt.hxx>
-#include <vector>
-
-inline TopoDS_Shape section(const TopoDS_Shape& shape, double z = 1.0) {
+inline std::vector<TopoDS_Wire> section(const TopoDS_Shape& shape, double z = 1.0) {
 	gp_Pln plane(gp_Pnt(0, 0, z), gp_Dir(0, 0, 1));
 	BRepAlgoAPI_Section sec(shape, plane, Standard_False);
 	sec.ComputePCurveOn1(Standard_True);
@@ -903,20 +889,15 @@ inline TopoDS_Shape section(const TopoDS_Shape& shape, double z = 1.0) {
 		groups.push_back(group);
 	}
 
-	// Construir compound de wires
+	// Construir shape de wires
 	BRep_Builder builder;
-	TopoDS_Compound result;
-	builder.MakeCompound(result);
+	std::vector<TopoDS_Wire> result;
 
-	for (auto& grp : groups) {
-		BRepBuilderAPI_MakeWire wireMaker;
-		for (auto& e : grp) wireMaker.Add(e);
-		if (wireMaker.IsDone()) {
-			ShapeFix_Wire sfx;
-			sfx.Load(wireMaker.Wire());
-			sfx.Perform();
-			builder.Add(result, sfx.Wire());
-		}
+	for (auto& group : groups) {
+		BRepBuilderAPI_MakeWire mkWire;
+		for (auto& edge : group) mkWire.Add(edge);
+
+		result.push_back(mkWire.Wire());
 	}
 
 	return result;

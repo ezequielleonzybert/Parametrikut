@@ -1,15 +1,17 @@
 #pragma once
 #include <QString>
-#include <TopoDS_Compound.hxx>
+#include <TopoDS_Wire.hxx>
 
 class Exporter {
 public:
     Exporter() = default;
     ~Exporter() = default;
 
-    void setShape(const TopoDS_Shape shape);
+    void add(const std::vector<TopoDS_Wire>& wires);
     bool exportToFile(const QString& filename) const;
 
 private:
-    TopoDS_Shape shape;
+    std::vector<TopoDS_Wire> wires;
+    float width;
+    float height;
 };
