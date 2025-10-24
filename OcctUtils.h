@@ -30,8 +30,6 @@
 #include <BRepTools.hxx>
 #include <BRepBndLib.hxx>
 #include <BRepAlgoAPI_Section.hxx>
-#include <ShapeFix_Wire.hxx>
-#include <BRepAdaptor_Curve.hxx>
 
 enum class Axis {
 	x,

@@ -392,7 +392,7 @@ void Assembly::cadCode()
 		parts.push_back(fronts[i]);
 	}
 
-	//outlines = section(packed);
-	//for(auto& w : outlines)	parts.push_back(w);
+	outlines = section(packed);
 
+	//for(auto& w : outlines)	parts.push_back(w);
 }
