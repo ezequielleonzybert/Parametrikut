@@ -9,6 +9,8 @@
 Parametrikut::Parametrikut(QWidget *parent)
     : QMainWindow(parent)
 {
+    resize(600, 400);
+
     assembly = new Assembly();
     assembly->build();
 
@@ -41,12 +43,12 @@ Parametrikut::Parametrikut(QWidget *parent)
     btnExport = new QPushButton("Export plan", leftWidget);
     leftLayout->addWidget(btnExport, 0);
 
-    centralLayout->addWidget(leftWidget, 0);
+    centralLayout->addWidget(leftWidget, 1);
 
     viewer = new OcctQWidgetViewer(centralWidget);
     viewer->displayAssembly(*assembly); //first display
 
-    centralLayout->addWidget(viewer, 1);
+    centralLayout->addWidget(viewer, 4);
     viewer->update();
     viewer->setFocus();
 
@@ -63,7 +65,6 @@ Parametrikut::Parametrikut(QWidget *parent)
             QDir::homePath(),
             "SVG Files (*.svg);;All Files (*)"
         );
-
         Exporter exporter;
         exporter.add(assembly->outlines);
         exporter.exportToFile(filePath);

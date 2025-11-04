@@ -120,6 +120,7 @@
     <ClCompile Include="cadcode.cpp">
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">NotUsing</PrecompiledHeader>
     </ClCompile>
+    <ClCompile Include="cadcode2.cpp" />
     <ClCompile Include="exporter.cpp" />
     <ClCompile Include="OcctQWidgetViewer.cpp">
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">NotUsing</PrecompiledHeader>

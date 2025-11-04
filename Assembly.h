@@ -55,6 +55,7 @@ struct Assembly{
 	Standard_Real getParamValf(const char* name);
 
 	void cadCode();
+	void cadcode2();
 	Part shelf(Standard_Real h);
 };
 

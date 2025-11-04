@@ -1,6 +1,7 @@
 #pragma once
 #include <QString>
 #include <TopoDS_Wire.hxx>
+#include <HLRBRep_CurveTool.hxx>
 
 class Exporter {
 public:

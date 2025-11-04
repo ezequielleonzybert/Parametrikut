@@ -38,6 +38,9 @@
     <ClCompile Include="exporter.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="cadcode2.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Assembly.h">
