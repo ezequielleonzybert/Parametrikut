@@ -67,7 +67,6 @@ void Assembly::build()
 	height = tabWidth*2 + shelvesSpacing * (levels-1) +thickness * levels + signHeight;
 	sideHeight = height - signHeight;
 
-	//cadCode();
 	cadcode2();
 }
 
