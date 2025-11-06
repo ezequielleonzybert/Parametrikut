@@ -40,7 +40,7 @@ struct Assembly{
 	int tabs;
 
 	Standard_Real inWidth;
-	Standard_Real inDepth;
+	//Standard_Real inDepth;
 	Standard_Real width;
 	Standard_Real depth;
 	Standard_Real height;

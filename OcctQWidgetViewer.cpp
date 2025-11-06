@@ -49,6 +49,13 @@ OcctQWidgetViewer::OcctQWidgetViewer(QWidget* theParent)
     // create AIS context
     myContext = new AIS_InteractiveContext(myViewer);
 
+    // change render precision. coef default = 0.001, angle default 0.349
+    Handle(Prs3d_Drawer) aDrawer = myContext->DefaultDrawer();
+    //Standard_Real default1 = aDrawer->DeviationCoefficient();
+    //Standard_Real default2 = aDrawer->DeviationAngle();
+    //aDrawer->SetDeviationCoefficient(0.0001);
+    aDrawer->SetDeviationAngle(0.01);
+
     // note - window will be created later within initializeGL() callback!
     myView = myViewer->CreateView();
     myView->SetImmediateUpdate(false);

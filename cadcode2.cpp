@@ -54,58 +54,97 @@ void Assembly::cadcode2() {
 		}
 	}
 
-	btBack.build(thickness);
+	btBack.build(true, thickness);
 
 #pragma endregion
 
 #pragma region Lateral
 
 	// Outer Wire
+	Standard_Real slotEdgeSpacing = thickness * 1.5;
+
 	BuildingTool btLateral;
 
-	// Bottom Front Slot, needed to calculate the lateral total depth and ellipse rx:
-	Standard_Real latFrontSlotX = tabWidth + thickness * 1.5 + botShelfDepth;
+	// Calculate Bottom Front Slot, needed to calculate the lateral total depth and ellipse rx:
+	Standard_Real latFrontSlotX = tabWidth + looseDiff/2 + slotEdgeSpacing + botShelfDepth;
 	Standard_Real latFrontSlotY = backSlotsLocs[0].Y() + slotLength / 2 + thickness * 1.5;
 	Standard_Real latFrontSlotW = slotThicknessLoose;
 	Standard_Real latFrontSLotH = slotLength;
-	btLateral.rectangle(latFrontSlotW, latFrontSLotH, latFrontSlotX, latFrontSlotY);
 
+	// ellipse must pass through this point.
+	gp_Pnt recTopRight(
+		latFrontSlotX + latFrontSlotW/2 + slotEdgeSpacing,
+		latFrontSlotY + latFrontSLotH/2,
+		0
+	);
 
-	//gp_Pnt pointInEllipse(
-	//	latFrontSlotX + latFrontSlotW/2,
-	//	latFrontSlotY + latFrontSLotH/2,
-	//	0
-	//);
+	Standard_Real ellipseRadY = sideHeight;	
+	Standard_Real ery2 = ellipseRadY * ellipseRadY;
+	Standard_Real px = recTopRight.X() - (topShelfDepth + tabWidth + looseDiff + thickness * 2);
+	Standard_Real px2 = px*px;
+	Standard_Real py2 = recTopRight.Y() * recTopRight.Y();
+	Standard_Real ellipseRadX = abs(px) * sqrt(ery2 / (ery2 - py2));
 
-	//Standard_Real ellipseRadY = height;
-	//Standard_Real ellipseRadX = abs(pointInEllipse.X()) * sqrt((ellipseRadY * ellipseRadY) / ((ellipseRadY * ellipseRadY) - (pointInEllipse.Y()* pointInEllipse.Y())));
+	depth = topShelfDepth + tabWidth + looseDiff + thickness * 2 + ellipseRadX;
 
-	//depth = tabWidth + thickness * 2 + topShelfDepth + ellipseRadX;
+	// Ellipse arcs and shelves slides
+	btLateral.moveTo(0, 0);
+	btLateral.lineTo(depth, 0);
 
-	//// Ellipse arcs and shelves slides
-	//btLateral.moveTo(0, 0);
-	//btLateral.lineTo(depth, 0);
+	gp_Pnt center(btLateral.getCurrentPos().Translated({-ellipseRadX,0,0}));
+	Ellipse2 ellipse(center, ellipseRadX, ellipseRadY);
 
-	////Standard_Real rx = (depth - topShelfDepth); //more or less
-	////Standard_Real ry = height;
-	//gp_Pnt center(btLateral.getCurrentPos().Translated({-ellipseRadX,0,0}));
-	//Ellipse2 ellipse(center, ellipseRadX, ellipseRadY);
+	std::vector<gp_Pnt> lateralFrontSlotsLocs;
+	for (int i = 0; i < levels; i++) {
 
-	////for (int i = 0; i < levels; i++) {
+		Standard_Real y = center.Y() + backSlotsLocs[i*2].Y() - slotThicknessLoose / 2;
+		Standard_Real x = center.X() + ellipse.getRadiusX(y);
+		btLateral.arcTo(x, y, ellipseRadX, ellipseRadY, center);
+	
+		btLateral.LineTo(tabWidth + looseDiff / 2 + thickness + botShelfDepth / 2, y);
+		btLateral.lineTo(0, slotThicknessLoose);
+		y = btLateral.getCurrentPos().Y();
+		x = center.X() + ellipse.getRadiusX(y);
+		btLateral.LineTo(x, y);
 
-	//	Standard_Real y = center.Y() + backSlotsLocs[0].Y() - slotThicknessLoose / 2;
-	//	Standard_Real x = center.X() + ellipse.getRadiusX(y);
-	//	btLateral.arcTo(x, y, ellipseRadX, ellipseRadY, center);
+		// prepare front slots locations for next step
+		Standard_Real slotCornerY = y + slotEdgeSpacing + slotLength;
+		x = center.X() + ellipse.getRadiusX(slotCornerY) - slotEdgeSpacing;
+		y += slotEdgeSpacing + slotLength / 2;
+		lateralFrontSlotsLocs.push_back(gp_Pnt(x, y, 0));
+	}
 
-	////}
+	btLateral.arcTo(
+		center.X(),
+		center.Y() + ellipseRadY,
+		ellipseRadX, ellipseRadY,
+		center
+	);
 
-	btLateral.build();
+	//btLateral.lineTo(0, )
+
+	// Lateral Front Slots:
+	for (int i = 0; i < levels-1; i++) {
+
+		Standard_Real x = lateralFrontSlotsLocs[i].X();
+		Standard_Real y = lateralFrontSlotsLocs[i].Y();
+		btLateral.rectangle(latFrontSlotW, latFrontSLotH, x, y);
+	}
+
+	btLateral.build(true, false);
 
 
 #pragma endregion
 
 	//parts.push_back(btBack.prism);
-	parts.push_back(btLateral.wires[0]);
+	for (auto w : btLateral.wires) {
+		parts.push_back(w);
+	}
+	//for (auto ee : btLateral.edges) {
+	//	for (auto e : ee) {
+	//		parts.push_back(e);
+	//	}
+	//}
 
 	//edges = btBack.edges;
 

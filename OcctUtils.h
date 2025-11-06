@@ -35,6 +35,7 @@
 #include <BRepBuilderAPI_MakeEdge2d.hxx>
 #include <gp_Lin2d.hxx>
 #include <Extrema_ExtPElC.hxx>
+#include <gp_Circ.hxx>
 
 enum class Axis {
 	x,
@@ -460,8 +461,6 @@ public:
 	/// Draw a rectangle as a new wire at the absolute given position
 	void rectangle(Standard_Real w, Standard_Real h, Standard_Real x = 0, Standard_Real y = 0) {
 
-		BRepBuilderAPI_MakeWire mkWire;
-
 		std::vector<gp_Pnt> vv;
 		vv.push_back(gp_Pnt(-w / 2 + x, -h / 2 + y, 0));
 		vv.push_back(gp_Pnt(w / 2 + x, -h / 2 + y, 0));
@@ -474,6 +473,16 @@ public:
 			BRepBuilderAPI_MakeEdge mkEdge(vv[i], vv[(i+1)%4]);
 			ee.push_back(mkEdge.Edge());
 		}
+
+		edges.push_back(ee);
+	}
+
+	void circle(Standard_Real r, Standard_Real x = 0, Standard_Real y = 0) {
+		
+		BRepBuilderAPI_MakeWire mkWire;
+		gp_Circ circle(gp_Ax2(gp_Pnt(x, y, 0), gp_Dir(0, 0, 1)), r);
+		BRepBuilderAPI_MakeEdge mkEdge(circle);
+		std::vector<TopoDS_Edge> ee = { mkEdge.Edge() };
 
 		edges.push_back(ee);
 	}
@@ -492,6 +501,28 @@ public:
 		gp_Pnt p1(this->x, this->y, 0);
 		this->x += x;
 		this->y += y;
+		gp_Pnt p2(this->x, this->y, 0);
+		vertices.back().push_back(p2);
+
+		BRepBuilderAPI_MakeEdge mkEdge(p1, p2);
+		edges.back().push_back(mkEdge.Edge());
+
+		if (radius) {
+			FilletData fd;
+			fd.wireIdx = vertices.size() - 1;
+			fd.edge1Idx = vertices.back().size() - 2;
+			fd.edge2Idx = vertices.back().size() - 1;
+			fd.radius = radius;
+			fd.vertex = p2;
+			filletsData.push_back(fd);
+		}
+	}
+
+	/// Draw a line to the absolute position and optionally set the fillet radius to the last vertex
+	void LineTo(Standard_Real x, Standard_Real y, Standard_Real radius = 0) {
+		gp_Pnt p1(this->x, this->y, 0);
+		this->x = x;
+		this->y = y;
 		gp_Pnt p2(this->x, this->y, 0);
 		vertices.back().push_back(p2);
 
@@ -556,8 +587,8 @@ public:
 		}
 	}
 
-	/// Construct fillets, wires, face, prism and populate the class members
-	void build(Standard_Real extrude = 0) {
+	/// Construct fillets and wires and optionally face and prism and populate the class members
+	void build(bool makeWires = true, bool makeFace = true, Standard_Real extrude = 0) {
 
 		// build edges
 		//for (int i = 0; i < vertices.size(); i++) {
@@ -593,23 +624,28 @@ public:
 		//edges = edgesCopy;
 
 		// Build wires
-		for (auto& ee : edges) {
-			BRepBuilderAPI_MakeWire mkWire;
-			for (int j = 0; j < ee.size(); j++) {
-				mkWire.Add(ee[j]);
+		if (makeWires) {
+			for (auto& ee : edges) {
+				BRepBuilderAPI_MakeWire mkWire;
+				for (int j = 0; j < ee.size(); j++) {
+					mkWire.Add(ee[j]);
+				}
+				wires.push_back(mkWire.Wire());
 			}
-			wires.push_back(mkWire.Wire());
-		}
 
-		// Build face
-		BRepBuilderAPI_MakeFace mkFace(wires[0]);
-		for (int i = 1; i < wires.size(); i++) {
-			mkFace.Add(TopoDS::Wire(wires[i].Reversed()));
-		}
-		face = mkFace.Face();		
+			// Build face
+			if (makeFace)
+			{
+				BRepBuilderAPI_MakeFace mkFace(wires[0]);
+				for (int i = 1; i < wires.size(); i++) {
+					mkFace.Add(TopoDS::Wire(wires[i].Reversed()));
+				}
+				face = mkFace.Face();
 
-		if (extrude) {
-			prism = BRepPrimAPI_MakePrism(face, gp_Vec(0, 0, extrude));
+				if (extrude) {
+					prism = BRepPrimAPI_MakePrism(face, gp_Vec(0, 0, extrude));
+				}
+			}
 		}
 	}
 
