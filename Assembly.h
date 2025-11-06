@@ -30,6 +30,7 @@ struct Assembly{
 	Standard_Real pinLength;
 	Standard_Real shelvesSpacing;
 	Standard_Real topShelfDepth;
+	Standard_Real botShelfDepth;
 	Standard_Real signHeight;
 	Standard_Real sideHeight;
 

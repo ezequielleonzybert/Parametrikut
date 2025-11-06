@@ -12,6 +12,7 @@ Assembly::Assembly()
 	pinLength = slotLength * 1.5f;
 	shelvesSpacing = 100.f;
 	topShelfDepth = 70.f;
+	botShelfDepth = 100.f;
 	signHeight = 50.f;
 
 	levels = 3;
@@ -23,7 +24,7 @@ Assembly::Assembly()
 	inDepth = 100.f;
 
 	width = inWidth + tabWidth*2 + thickness*2;
-	depth = inDepth + tabWidth*2;
+	//depth = botShelfDepth + thickness*2 + tabWidth + 50.f; //50.f would be the value from the shelf front to the ellipse arc. must be calculated
 	height = tabWidth + shelvesSpacing * levels + thickness * levels  + signHeight;
 	sideHeight = height - signHeight;
 
@@ -31,6 +32,7 @@ Assembly::Assembly()
 	addParam("Inner width", inWidth);
 	addParam("Inner depth", inDepth);
 	addParam("Top shelf depth", topShelfDepth);
+	addParam("Bottom shelf depth", botShelfDepth);
 	addParam("Shelves spacing", shelvesSpacing);
 	addParam("Tab width", tabWidth);
 	addParam("Slot length", slotLength);
@@ -57,13 +59,14 @@ void Assembly::build()
 	inWidth = getParamValf("Inner width");
 	inDepth = getParamValf("Inner depth");
 	topShelfDepth = getParamValf("Top shelf depth");
+	botShelfDepth = getParamValf("Bottom shelf depth");
 
 	slotThicknessLoose = thickness + .5f;
 	slotThicknessMid = thickness;
 	slotThicknessTight = thickness - .5f; 
 
 	width = inWidth + tabWidth * 2 + thickness * 2;
-	depth = inDepth + tabWidth * 2;
+	//depth = inDepth + tabWidth * 2;
 	height = tabWidth*2 + shelvesSpacing * (levels-1) +thickness * levels + signHeight;
 	sideHeight = height - signHeight;
 

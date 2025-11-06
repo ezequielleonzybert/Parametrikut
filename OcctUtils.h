@@ -12,6 +12,7 @@
 #include <BRepBuilderAPI_MakeVertex.hxx>
 #include <BRepBuilderAPI_MakePolygon.hxx>
 #include <GC_MakeEllipse.hxx>
+#include <GC_MakeArcOfEllipse.hxx>
 #include <BRepPrimAPI_MakePrism.hxx>
 #include <TopTools_ListOfShape.hxx>
 #include <BRepFilletAPI_MakeFillet2d.hxx>
@@ -33,7 +34,7 @@
 //cadcode2
 #include <BRepBuilderAPI_MakeEdge2d.hxx>
 #include <gp_Lin2d.hxx>
-
+#include <Extrema_ExtPElC.hxx>
 
 enum class Axis {
 	x,
@@ -213,6 +214,38 @@ public:
 
 };
 
+class Ellipse2 {
+
+	gp_Pnt center;
+	Standard_Real rx;
+	Standard_Real ry;
+	gp_Dir dir = gp_Dir(1, 0, 0);
+
+public:
+
+	gp_Elips ellipse;
+
+	Ellipse2(gp_Pnt center, Standard_Real rx, Standard_Real ry) :
+		center(center),
+		rx(rx),
+		ry(ry)
+	{
+		if (rx < ry) {
+			std::swap(rx, ry);
+			dir = gp_Dir(0, 1, 0);
+		}
+		ellipse = gp_Elips(gp_Ax2(center, gp_Dir(0,0,1), dir), rx, ry);
+	};
+
+	Standard_Real getRadiusX(Standard_Real y = 0) {
+		return rx * sqrt(1 - (y * y) / (ry * ry));
+	}
+	Standard_Real getRadiusY(Standard_Real x = 0) {
+		return ry * sqrt(1 - (x * x) / (rx * rx));
+	}
+
+};
+
 class Part; //forward declaration
 struct Joint {
 	Joint() {};
@@ -386,12 +419,6 @@ private:
 	}
 };
 
-class Part2 {
-public:
-	std::vector<std::vector<TopoDS_Edge>> wires;
-	TopoDS_Shape shape;
-};
-
 class BuildingTool {
 
 private:
@@ -415,7 +442,14 @@ public:
 	TopoDS_Face face;
 	TopoDS_Shape prism;
 
-	BuildingTool(Standard_Real x = 0, Standard_Real y = 0) {
+	/// Initialize an empty BuildingTool
+	BuildingTool() {
+		this->x = 0;
+		this->y = 0;
+	}
+
+	/// Initialize the BuildingTool and move to the given position
+	BuildingTool(Standard_Real x, Standard_Real y) {
 		this->x = x;
 		this->y = y;
 		vertices.push_back(std::vector<gp_Pnt>{});
@@ -423,7 +457,7 @@ public:
 		edges.push_back(std::vector<TopoDS_Edge>{});
 	}
 
-	/// Draw a rectangle as a new wire
+	/// Draw a rectangle as a new wire at the absolute given position
 	void rectangle(Standard_Real w, Standard_Real h, Standard_Real x = 0, Standard_Real y = 0) {
 
 		BRepBuilderAPI_MakeWire mkWire;
@@ -435,7 +469,13 @@ public:
 		vv.push_back(gp_Pnt(-w / 2 + x, h / 2 + y, 0));
 		vertices.push_back(vv);
 
-		edges.push_back(std::vector<TopoDS_Edge>{});
+		std::vector<TopoDS_Edge> ee;
+		for (int i = 0; i < 4; i++) {
+			BRepBuilderAPI_MakeEdge mkEdge(vv[i], vv[(i+1)%4]);
+			ee.push_back(mkEdge.Edge());
+		}
+
+		edges.push_back(ee);
 	}
 
 	/// Move to the absolute position and start a new wire
@@ -449,10 +489,14 @@ public:
 
 	/// Draw a line to the position relative to the current position and optionally set the fillet radius to the last vertex
 	void lineTo(Standard_Real x, Standard_Real y, Standard_Real radius = 0) {
+		gp_Pnt p1(this->x, this->y, 0);
 		this->x += x;
 		this->y += y;
-		gp_Pnt v(this->x, this->y, 0);
-		vertices.back().push_back(v);
+		gp_Pnt p2(this->x, this->y, 0);
+		vertices.back().push_back(p2);
+
+		BRepBuilderAPI_MakeEdge mkEdge(p1, p2);
+		edges.back().push_back(mkEdge.Edge());
 
 		if (radius) {
 			FilletData fd;
@@ -460,13 +504,47 @@ public:
 			fd.edge1Idx = vertices.back().size() - 2;
 			fd.edge2Idx = vertices.back().size() - 1;
 			fd.radius = radius;
-			fd.vertex = v;
+			fd.vertex = p2;
 			filletsData.push_back(fd);
 		}
 	}
 
-	/// close the wire with a line and optionally apply the fillet radius to the last vertex
+	// Draw an elliptical arc from the current position to the absolute postion giving radii and center point of the ellipse. Optionally the fillet radius of the last vertex
+	void arcTo(Standard_Real x, Standard_Real y, Standard_Real rx, Standard_Real ry, gp_Pnt center, Standard_Real filletRadius = 0) {
+		
+		Standard_Real majorRad = rx, minorRad = ry;
+		gp_Dir dir(1, 0, 0);
+		gp_Pnt p1(this->x, this->y, 0);
+		gp_Pnt p2(x, y, 0);
+		this->x = x;
+		this->y = y;
+		if (rx < ry) {
+			std::swap(majorRad, minorRad);
+			dir = gp_Dir(0, 1, 0);
+		}
+
+		gp_Elips ellipse(gp_Ax2(center, gp_Dir(0,0,1), dir), majorRad, minorRad);
+		BRepBuilderAPI_MakeEdge mkEdge(ellipse, p1, p2);
+		edges.back().push_back(mkEdge.Edge()); 
+		vertices.back().push_back(p2);
+	}
+
+	void arcTo(Ellipse2 ellipse, gp_Pnt p) {
+		gp_Pnt p1(this->x, this->y, 0);
+		this->x = p.X();
+		this->y = p.Y();
+		BRepBuilderAPI_MakeEdge mkEdge(ellipse.ellipse, p1, p);
+		edges.back().push_back(mkEdge.Edge());
+		vertices.back().push_back(p);
+
+	}
+
+	/// Close the wire with a line and optionally apply the fillet radius to the last vertex
 	void close(Standard_Real radius = 0) {
+
+		BRepBuilderAPI_MakeEdge mkEdge(gp_Pnt(this->x, this->y, 0), vertices.back()[0]);
+		edges.back().push_back(mkEdge.Edge());
+
 		if (radius) {
 			FilletData fd;
 			fd.wireIdx = vertices.size() - 1;
@@ -478,47 +556,46 @@ public:
 		}
 	}
 
-	/// Construct edges, wires, face, prism and populate the class members
+	/// Construct fillets, wires, face, prism and populate the class members
 	void build(Standard_Real extrude = 0) {
 
 		// build edges
-		for (int i = 0; i < vertices.size(); i++) {
-			for (int j = 0; j < vertices[i].size(); j++) {
-				BRepBuilderAPI_MakeEdge mkEdge(vertices[i][j], vertices[i][(j + 1) % vertices[i].size()]);
-				TopoDS_Edge edge(mkEdge.Edge());
-				edges[i].push_back(edge);
-			}
-		}
+		//for (int i = 0; i < vertices.size(); i++) {
+		//	for (int j = 0; j < vertices[i].size(); j++) {
+		//		BRepBuilderAPI_MakeEdge mkEdge(vertices[i][j], vertices[i][(j + 1) % vertices[i].size()]);
+		//		TopoDS_Edge edge(mkEdge.Edge());
+		//		edges[i].push_back(edge);
+		//	}
+		//}
 
 		// Perform fillet and add new edges
 		std::vector<std::vector<TopoDS_Edge>> edgesCopy = edges;
 		std::vector<std::vector<std::pair<int, TopoDS_Edge>>> insertions(edges.size());
 
-		for (const auto& fd : filletsData) {
-			TopoDS_Edge& e1 = edgesCopy[fd.wireIdx][fd.edge1Idx];
-			TopoDS_Edge& e2 = edgesCopy[fd.wireIdx][fd.edge2Idx];
+		//for (const auto& fd : filletsData) {
+		//	TopoDS_Edge &e1 = edgesCopy[fd.wireIdx][fd.edge1Idx];
+		//	TopoDS_Edge &e2 = edgesCopy[fd.wireIdx][fd.edge2Idx];
 
-			ChFi2d_FilletAPI filletApi(e1, e2, gp_Pln(0, 0, 1, 0));
-			filletApi.Perform(fd.radius);
-			TopoDS_Edge filletedEdge = filletApi.Result(fd.vertex, e1, e2);
+		//	ChFi2d_FilletAPI filletApi(e1, e2, gp_Pln(0, 0, 1, 0));
+		//	filletApi.Perform(fd.radius);
+		//	TopoDS_Edge filletedEdge = filletApi.Result(fd.vertex, e1, e2);
 
-			insertions[fd.wireIdx].push_back({fd.edge2Idx, filletedEdge});
-		}
+		//	insertions[fd.wireIdx].push_back({fd.edge2Idx, filletedEdge});
+		//}
 
-		for (int w = 0; w < edgesCopy.size(); w++) {
-			auto& ins = insertions[w];
-			std::sort(ins.begin(), ins.end(), [](auto& a, auto& b) { return a.first > b.first; });
-			for (auto& p : ins) {
-				edgesCopy[w].insert(edgesCopy[w].begin() + p.first, p.second);
-			}
-		}
-		edges = edgesCopy;
+		//for (int w = 0; w < edgesCopy.size(); w++) {
+		//	auto& ins = insertions[w];
+		//	std::sort(ins.begin(), ins.end(), [](auto& a, auto& b) { return a.first > b.first; });
+		//	for (auto& p : ins) {
+		//		edgesCopy[w].insert(edgesCopy[w].begin() + p.first, p.second);
+		//	}
+		//}
+		//edges = edgesCopy;
 
 		// Build wires
 		for (auto& ee : edges) {
 			BRepBuilderAPI_MakeWire mkWire;
 			for (int j = 0; j < ee.size(); j++) {
-
 				mkWire.Add(ee[j]);
 			}
 			wires.push_back(mkWire.Wire());
@@ -536,6 +613,9 @@ public:
 		}
 	}
 
+	gp_Pnt getCurrentPos() {
+		return gp_Pnt(x, y, 0);
+	}
 };
 
 inline bool equal(Standard_Real a, Standard_Real b, Standard_Real tolerance = 1e-6f) {

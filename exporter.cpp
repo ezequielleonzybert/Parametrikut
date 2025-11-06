@@ -86,7 +86,7 @@ bool Exporter::exportToFile(const QString& filename) const {
                 break;
             }
         }
-        out << "Z\" style=\"fill:none;stroke:black;stroke-width:1\"/>\n";
+        out << "Z\" style=\"fill:none;stroke:black;stroke-width:0.5\"/>\n";
     }
 
     out << "</svg>";

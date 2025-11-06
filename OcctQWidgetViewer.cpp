@@ -154,7 +154,7 @@ void OcctQWidgetViewer::displayAssembly(Assembly assembly) {
             TopoDS_Wire wireTopo = TopoDS::Wire(wireMap(j));
             Handle(AIS_Shape) wire = new AIS_Shape(wireTopo);
             wire->SetColor(Quantity_Color(0.3,0.3,0.3, Quantity_TOC_RGB));
-            //strok width?
+            //stroke width?
             myContext->Display(wire, AIS_WireFrame, -1, false);
         }
 

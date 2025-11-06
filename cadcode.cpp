@@ -188,7 +188,7 @@ void Assembly::cadCode()
 
 	Rect lateralStraightRect(topShelfDepth + tabWidth + thickness, lateralBaseRect.h, Align::lh);
 
-	// lateralElipseEdge
+	// lateralEllipseEdge
 	Ellipse ellipse(depth - lateralStraightRect.w, sideHeight, -lateralStraightRect.w);
 	tools.Append(ellipse);
 	args.Append(intersect(&args, &tools));
