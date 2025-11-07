@@ -4,6 +4,7 @@ Assembly::Assembly()
 {
 	thickness = 3.12f;
 	tabWidth = 10.f;
+	railingHeight = 15.f;
 	slotThicknessLoose = thickness + .5f;
 	slotThicknessMid = thickness;
 	slotThicknessTight = thickness - .5f;
@@ -24,7 +25,7 @@ Assembly::Assembly()
 
 	width = inWidth + tabWidth*2 + thickness*2;
 	height = tabWidth*2 + shelvesSpacing * (levels - 1) + thickness * levels + signHeight;
-	sideHeight = height - signHeight;
+	sideHeight = height - signHeight - tabWidth + railingHeight;
 
 	addParam("Thickness", thickness);
 	addParam("Inner width", inWidth);
@@ -63,7 +64,7 @@ void Assembly::build()
 
 	width = inWidth + tabWidth * 2 + thickness * 2;
 	height = tabWidth*2 + shelvesSpacing * (levels-1) +thickness * levels + signHeight;
-	sideHeight = height - signHeight;
+	sideHeight = height - signHeight - tabWidth + railingHeight;
 
 	cadcode2();
 }

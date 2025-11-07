@@ -22,6 +22,7 @@ struct Assembly{
 
 	Standard_Real thickness;
 	Standard_Real tabWidth;
+	Standard_Real railingHeight;
 	Standard_Real slotThicknessLoose;
 	Standard_Real slotThicknessMid;
 	Standard_Real slotThicknessTight;

@@ -54,7 +54,7 @@ OcctQWidgetViewer::OcctQWidgetViewer(QWidget* theParent)
     //Standard_Real default1 = aDrawer->DeviationCoefficient();
     //Standard_Real default2 = aDrawer->DeviationAngle();
     //aDrawer->SetDeviationCoefficient(0.0001);
-    aDrawer->SetDeviationAngle(0.01);
+    aDrawer->SetDeviationAngle(0.1);
 
     // note - window will be created later within initializeGL() callback!
     myView = myViewer->CreateView();

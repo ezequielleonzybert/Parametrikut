@@ -54,14 +54,14 @@ void Assembly::cadcode2() {
 		}
 	}
 
-	btBack.build(true, thickness);
+	btBack.build(thickness);
 
 #pragma endregion
 
 #pragma region Lateral
 
 	// Outer Wire
-	Standard_Real slotEdgeSpacing = thickness * 1.5;
+	Standard_Real slotEdgeSpacing = thickness * 2;
 
 	BuildingTool btLateral;
 
@@ -89,23 +89,25 @@ void Assembly::cadcode2() {
 
 	// Ellipse arcs and shelves slides
 	btLateral.moveTo(0, 0);
-	btLateral.lineTo(depth, 0);
+	btLateral.lineTo(depth, 0, f2);
 
 	gp_Pnt center(btLateral.getCurrentPos().Translated({-ellipseRadX,0,0}));
 	Ellipse2 ellipse(center, ellipseRadX, ellipseRadY);
 
 	std::vector<gp_Pnt> lateralFrontSlotsLocs;
+	Standard_Real lastSlideTopY;
 	for (int i = 0; i < levels; i++) {
 
 		Standard_Real y = center.Y() + backSlotsLocs[i*2].Y() - slotThicknessLoose / 2;
 		Standard_Real x = center.X() + ellipse.getRadiusX(y);
-		btLateral.arcTo(x, y, ellipseRadX, ellipseRadY, center);
+		btLateral.arcTo(x, y, ellipseRadX, ellipseRadY, center, f1);
 	
-		btLateral.LineTo(tabWidth + looseDiff / 2 + thickness + botShelfDepth / 2, y);
+		btLateral.LineTo(tabWidth + looseDiff / 2 + thickness + botShelfDepth / 2, y); //wrong
 		btLateral.lineTo(0, slotThicknessLoose);
 		y = btLateral.getCurrentPos().Y();
 		x = center.X() + ellipse.getRadiusX(y);
-		btLateral.LineTo(x, y);
+		btLateral.LineTo(x, y, f1);
+		if (i == levels - 1) lastSlideTopY = y;
 
 		// prepare front slots locations for next step
 		Standard_Real slotCornerY = y + slotEdgeSpacing + slotLength;
@@ -121,7 +123,12 @@ void Assembly::cadcode2() {
 		center
 	);
 
-	//btLateral.lineTo(0, )
+	btLateral.LineTo(btLateral.getCurrentPos().X(), lastSlideTopY + slotEdgeSpacing);
+	btLateral.lineTo(-slotThicknessLoose, 0);
+	btLateral.LineTo(btLateral.getCurrentPos().X(), sideHeight);
+	btLateral.LineTo(0, sideHeight);
+	btLateral.close();
+
 
 	// Lateral Front Slots:
 	for (int i = 0; i < levels-1; i++) {
@@ -129,23 +136,24 @@ void Assembly::cadcode2() {
 		Standard_Real x = lateralFrontSlotsLocs[i].X();
 		Standard_Real y = lateralFrontSlotsLocs[i].Y();
 		btLateral.rectangle(latFrontSlotW, latFrontSLotH, x, y);
+
 	}
 
-	btLateral.build(true, false);
+	btLateral.build(thickness);
 
 
 #pragma endregion
 
 	//parts.push_back(btBack.prism);
-	for (auto w : btLateral.wires) {
-		parts.push_back(w);
-	}
+	//for (auto w : btLateral.wires) {
+	//	parts.push_back(w);
+	//}
 	//for (auto ee : btLateral.edges) {
 	//	for (auto e : ee) {
 	//		parts.push_back(e);
 	//	}
 	//}
-
+	parts.push_back(btLateral.prism);
 	//edges = btBack.edges;
 
 }
