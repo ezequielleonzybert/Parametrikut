@@ -2,21 +2,20 @@
 
 Assembly::Assembly()
 {
-	thickness = 3.12f;
-	tabWidth = 10.f;
-	slotLength = 30.f;
-	pinLength = slotLength * 1.5f;
-	shelvesSpacing = 100.f;
-	topShelfDepth = 50.f;
-	botShelfDepth = 100.f;
-	signHeight = 50.f;
+	thickness = 3;
+	tabWidth = 10;
+	slotLength = 30;
+	pinLength = slotLength * 1.5;
+	shelvesSpacing = 100;
+	topShelfDepth = 50;
+	botShelfDepth = 100;
+	signHeight = 50;
 
 	levels = 3;
 	backPinsQ = 2;
-	//frontPinsQ = std::min(std::max(1,backPinsQ-1),2);
 	tabs = 2;
 
-	inWidth = 200.f;
+	inWidth = 200;
 
 	recalculateParams();
 
@@ -30,7 +29,7 @@ Assembly::Assembly()
 	addParam("Pin length", pinLength);
 	addParam("Sign height", signHeight);
 	addParam("Levels", levels);
-	addParam("Back pins quantity", backPinsQ);
+	addParam("Back pins", backPinsQ);
 	addParam("Tabs", tabs);
 }
 
@@ -45,7 +44,7 @@ void Assembly::build()
 	pinLength = getParamValf("Pin length");
 	signHeight = getParamValf("Sign height");
 	levels = getParamVali("Levels");
-	backPinsQ = getParamVali("Back pins quantity");
+	backPinsQ = getParamVali("Back pins");
 	tabs = getParamVali("Tabs");
 	inWidth = getParamValf("Inner width");
 	topShelfDepth = getParamValf("Top shelf depth");
@@ -83,12 +82,12 @@ Standard_Real Assembly::getParamValf(const char* name) {
 }
 
 void Assembly::recalculateParams() {
-	slotThicknessLoose = thickness + .5f;
+	slotThicknessLoose = thickness + .5;
 	slotThicknessMid = thickness;
-	slotThicknessTight = thickness - .5f;
+	slotThicknessTight = thickness - .5;
 	railingHeight = thickness * 4;
 	looseDiff = slotThicknessLoose - thickness;
-	width = inWidth + tabWidth * 2 + thickness * 2;
+	width = inWidth + tabWidth * 2 + slotThicknessLoose * 2;
 	height = tabWidth + shelvesSpacing * (levels - 1) + thickness * levels + railingHeight + signHeight;
 	sideHeight = height - signHeight;
 }

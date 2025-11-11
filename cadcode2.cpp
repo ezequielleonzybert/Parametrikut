@@ -3,7 +3,6 @@
 
 void Assembly::cadcode2() {
 
-	bool doFillet = true;
 	Standard_Real f1 = 1, f2 = tabWidth/3;
 
 #pragma region Back
@@ -17,8 +16,7 @@ void Assembly::cadcode2() {
 
 	// Back tabs
 	std::vector<gp_Pnt> backTabsLocs;
-	//Standard_Real ySpacing = (sideHeight - slotLength / 12 - slotLength * (tabs+1)+slotLength / 3 * (tabs - 1)) / (tabs - 1); // take the measure to check WRONG
-	Standard_Real ySpacing = sideHeight - slotLength - (slotLength * 2 / 3) * tabs;
+	Standard_Real ySpacing = (sideHeight - slotLength - (slotLength * 2 / 3) * tabs) / (tabs-1);
 ;	for (int i = 0; i < tabs; i++) {
 		back.addJoint("tab" + std::to_string(i*2), back.X() + slotThicknessLoose / 2, back.Y(), thickness / 2, -90);
 		back.addJoint("tab" + std::to_string(i*2+1), -back.X() - slotThicknessLoose / 2, back.Y(), thickness / 2, -90);
@@ -105,6 +103,7 @@ void Assembly::cadcode2() {
 
 	std::vector<gp_Pnt> lateralFrontSlotsLocs;
 	Standard_Real lastSlideTopY;
+	std::vector<Standard_Real> shelvesDepth;
 	for (int i = 0; i < levels; i++) {
 
 		Standard_Real y = backSlotsLocs[i*backPinsQ].Y() - slotThicknessLoose / 2;
@@ -120,12 +119,15 @@ void Assembly::cadcode2() {
 	
 		// slides
 		if (i < levels - 1) {
-			Standard_Real ShelfWidth = lateralFrontSlotsLocs[i].X() - thickness / 2 - shelvesStartX; // thickness or slotThickness? wrong
-			lateral.LineTo(shelvesStartX + ShelfWidth/2, lateral.Y());
+			Standard_Real shelfDepth = lateralFrontSlotsLocs[i].X() - thickness / 2 - shelvesStartX; // thickness or slotThickness? wrong
+			shelvesDepth.push_back(shelfDepth);
+			lateral.LineTo(shelvesStartX + shelfDepth/2, lateral.Y());
 		}
 		else {
 			lateral.LineTo(shelvesStartX + topShelfDepth/2, lateral.Y());
+			shelvesDepth.push_back(topShelfDepth);
 		}
+		lateral.addJoint("slide" + std::to_string(i), lateral.X(), lateral.Y() + slotThicknessLoose / 2, thickness / 2,-90,90,0);
 		lateral.lineTo(0, slotThicknessLoose);
 		y = lateral.Y();
 		x = center.X() + ellipse.getRadiusX(y);
@@ -169,26 +171,62 @@ void Assembly::cadcode2() {
 
 #pragma region Shelves
 
-	std::vector<BuildingTool> shelves(levels);
+	std::vector<BuildingTool> shelves;
 
-	int pinsQ = 1;
-	Standard_Real frontPinsSpacing = 0;
-	Standard_Real frontPinX = 0;
-	if (pinsQ * pinLength < inWidth / 4 / 3) {
-		pinsQ++;
-		frontPinX = inWidth / 4 - pinLength / 2;
-		frontPinsSpacing = inWidth / 4 - pinsQ * pinLength;
+	for (int j = 0; j < levels; j++) {
+		Standard_Real shelfDepth;
+
+		int pinsQ = 1;
+		Standard_Real frontPinsSpacing;
+		Standard_Real firstPinX = -pinLength / 2;
+		if (pinsQ * pinLength < inWidth / 4 / 3) {
+			pinsQ++;
+			firstPinX = -inWidth / 8;
+			frontPinsSpacing = inWidth / 4 - pinsQ * pinLength;
+		}
+
+		// front pins
+		BuildingTool shelf(-width / 2, 0);
+		shelf.LineTo(firstPinX, 0);
+		for (int i = 0; i < pinsQ; i++) {
+			shelf.lineTo(0, -thickness, f1);
+			shelf.lineTo(pinLength, 0, f1);
+			shelf.lineTo(0, thickness);
+			if (pinsQ > 1 && i < pinsQ - 1)
+				shelf.lineTo(frontPinsSpacing, 0);
+		}
+
+		// tab
+		shelf.LineTo(width / 2, 0, f2);
+		shelf.lineTo(0, shelvesDepth[j] / 2 + tabWidth, f2);
+		shelf.lineTo(-tabWidth, 0, f1);
+		shelf.lineTo(0, -tabWidth);
+		shelf.addJoint("tab", shelf.X() - slotThicknessLoose / 2, shelf.Y(), thickness / 2);
+		shelf.lineTo(-slotThicknessLoose, 0);
+		shelf.lineTo(0, shelvesDepth[j] / 2, f1);
+
+		// back pins
+		for (int i = 0; i < backPinsQ; i++) {
+			Standard_Real x = backSlotsLocs[i].X() + pinLength / 2;
+			shelf.LineTo(x, shelf.Y());
+			shelf.lineTo(0, thickness * 1.5, f1);
+			shelf.lineTo(-pinLength, 0, f1);
+			shelf.lineTo(0, -thickness * 1.5);
+		}
+
+		// tab
+		shelf.LineTo(-inWidth / 2, shelvesDepth[j], f1);
+		shelf.lineTo(0, -shelvesDepth[j] / 2);
+		shelf.lineTo(-slotThicknessLoose, 0);
+		shelf.lineTo(0, tabWidth, f1);
+		shelf.lineTo(-tabWidth, 0, f2);
+		shelf.close(f2);
+
+		shelf.build(thickness);
+
+		shelves.push_back(shelf);
 	}
-
-	BuildingTool shelf(-inWidth / 2, 0);
-	for (int i = 0; i < pinsQ; i++) {
-		shelf.lineTo(frontPinX - pinLength / 2, 0);
-		shelf.lineTo(0, -thickness);
-		shelf.lineTo(pinLength, 0);
-		shelf.lineTo(0, thickness);
-	}
-
-
+	
 #pragma endregion
 
 #pragma region Assembly
@@ -196,11 +234,18 @@ void Assembly::cadcode2() {
 	back.rotate(90);
 
 	lateral.rigidJoint(lateral.joints["frontSlot0"], back.joints["tab0"]);
+	
+	for (int i = 0; i < levels; i++) {
+		shelves[i].rigidJoint(shelves[i].joints["tab"], lateral.joints["slide"+std::to_string(i)]);
+	}
 
 #pragma endregion
 
 	parts.push_back(back);
 	parts.push_back(lateral);
+	for (auto shelf : shelves) {
+		parts.push_back(shelf);
+	}
 
 	//edges must be poblated to export SVG
 	for (auto ee : back.edges) {

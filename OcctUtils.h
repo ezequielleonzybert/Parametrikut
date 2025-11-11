@@ -462,7 +462,7 @@ private:
 
 	void applyParentTransform(const gp_Trsf& parentGlobal) {
 		transformation = parentGlobal * connection;
-		prism = prism.Located(TopLoc_Location(transformation));
+		shape = shape.Located(TopLoc_Location(transformation));
 		for (auto& [label, j] : joints) {
 			j.global = transformation * j.local;
 		}
@@ -477,7 +477,7 @@ public:
 	std::vector<std::vector<TopoDS_Edge>> edges;
 	std::vector<TopoDS_Wire> wires;
 	TopoDS_Face face;
-	TopoDS_Shape prism;
+	TopoDS_Shape shape;
 	std::unordered_map<std::string, Joint> joints;
 
 	///Initialize an empty BuildingTool with position at 0,0
@@ -603,7 +603,7 @@ public:
 		}
 	}
 
-	///Construct fillets and wires and optionally face and prism and populate the class members
+	///Construct fillets and wires and optionally face and shape and populate the class members
 	void build(Standard_Real extrude = 0) {
 
 		// Perform fillet and add new edges
@@ -649,8 +649,17 @@ public:
 			face = mkFace.Face();
 
 			if (extrude) {
-				prism = BRepPrimAPI_MakePrism(face, gp_Vec(0, 0, extrude));
+				shape = BRepPrimAPI_MakePrism(face, gp_Vec(0, 0, extrude));
 			}
+		}
+		else {
+			BRep_Builder builder;
+			TopoDS_Compound compound;
+			builder.MakeCompound(compound);
+			for (auto w : wires) {
+				builder.Add(compound, w);
+			}
+			shape = compound;
 		}
 	}
 
@@ -679,7 +688,7 @@ public:
 		tr.SetRotationPart(q);
 
 		transformation *= tr;
-		prism = prism.Located(TopLoc_Location(transformation));
+		shape = shape.Located(TopLoc_Location(transformation));
 
 		for (auto& [label, j] : joints) {
 			j.global = transformation * j.local;
@@ -712,7 +721,7 @@ public:
 
 		transformation = parent->transformation * j2.local * j1.local.Inverted();
 		connection = parent->transformation.Inverted() * transformation;
-		prism = prism.Located(TopLoc_Location(transformation));
+		shape = shape.Located(TopLoc_Location(transformation));
 
 		for (auto& [label, j] : joints)
 			j.global = transformation * j.local;

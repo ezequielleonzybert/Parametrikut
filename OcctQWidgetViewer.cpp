@@ -151,14 +151,14 @@ void OcctQWidgetViewer::displayAssembly() {
     int parts = int(assembly->parts.size());
 
     for (int i = 0; i < parts; i++) {
-        TopoDS_Shape prism = assembly->parts[i].prism;
-        Handle(AIS_Shape) shape = new AIS_Shape(prism);
-        shape->SetMaterial(Graphic3d_NOM_CHARCOAL);
-        shape->SetColor(Quantity_Color(50, 1, 1, Quantity_TOC_HLS));
-        myContext->Display(shape, AIS_Shaded, -1, false);
+        TopoDS_Shape shape = assembly->parts[i].shape;
+        Handle(AIS_Shape) aisShape = new AIS_Shape(shape);
+        aisShape->SetMaterial(Graphic3d_NOM_CHARCOAL);
+        aisShape->SetColor(Quantity_Color(50, 1, 1, Quantity_TOC_HLS));
+        myContext->Display(aisShape, AIS_Shaded, -1, false);
 
         TopTools_IndexedMapOfShape wireMap;
-        TopExp::MapShapes(prism, TopAbs_WIRE, wireMap);
+        TopExp::MapShapes(shape, TopAbs_WIRE, wireMap);
 
         for (int j = 1; j <= wireMap.Extent(); ++j) {
             TopoDS_Wire wireTopo = TopoDS::Wire(wireMap(j));
@@ -170,7 +170,7 @@ void OcctQWidgetViewer::displayAssembly() {
         if (measuring) {
 
             // Vertices
-            for (TopExp_Explorer vertexExp(prism, TopAbs_VERTEX); vertexExp.More(); vertexExp.Next()) {
+            for (TopExp_Explorer vertexExp(shape, TopAbs_VERTEX); vertexExp.More(); vertexExp.Next()) {
                 TopoDS_Vertex vertexTopo = TopoDS::Vertex(vertexExp.Current());
                 gp_Pnt p = BRep_Tool::Pnt(vertexTopo);
                 Handle(Geom_CartesianPoint) gPoint = new Geom_CartesianPoint(p);

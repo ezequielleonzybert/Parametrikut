@@ -136,9 +136,9 @@ private:
         }
 
         void second(float x2, float y2, float z2) {
-            float dx = x2 - x;
-            float dy = y2 - y;
-            float dz = z2 - z;
+            float dx = abs(x2 - x);
+            float dy = abs(y2 - y);
+            float dz = abs(z2 - z);
             QString text = QString("\u0394X = %1\n\u0394Y = %2\n\u0394Z = %3")
                 .arg(dx, 0, 'f', 3)
                 .arg(dy, 0, 'f', 3)
