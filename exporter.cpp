@@ -68,9 +68,9 @@ bool Exporter::exportToFile(const QString& filename) const {
                 break;
             }
             case GeomAbs_Circle: {
-                gp_Circ circ = adaptor.Circle();
+                gp_Circ circle = adaptor.Circle();
 
-                float r = static_cast<float>(circ.Radius());
+                float r = static_cast<float>(circle.Radius());
 
                 int largeArc = ((l - f) > M_PI) ? 1 : 0;
                 int sweep = 0;
@@ -80,13 +80,28 @@ bool Exporter::exportToFile(const QString& filename) const {
                     << x2 << " " << y2;
                 break;
             }
-            case GeomAbs_Ellipse:
+            case GeomAbs_Ellipse: {
+                gp_Elips ellipse = adaptor.Ellipse();
+
+                gp_Dir dir = ellipse.XAxis().Direction();
+                Standard_Real rx = static_cast<float>(ellipse.MajorRadius());
+                Standard_Real ry = static_cast<float>(ellipse.MinorRadius());
+
+                if (dir.IsEqual(gp_Dir(0,1,0),0.1E-5)) std::swap(rx, ry);
+
+                int largeArc = ((l - f) > M_PI) ? 1 : 0;
+                int sweep = 0;
+
+                out << "A" << rx << " " << ry << " 0 "
+                    << largeArc << " " << sweep << " "
+                    << x2 << " " << y2;
                 break;
+            }
             default:
                 break;
             }
         }
-        out << "Z\" style=\"fill:none;stroke:black;stroke-width:0.5\"/>\n";
+        out << "Z\" style=\"fill:none;stroke:black;stroke-width:1px;vector-effect:non-scaling-stroke\" />\n";
     }
 
     out << "</svg>";

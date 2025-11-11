@@ -423,6 +423,16 @@ private:
 class BuildingTool {
 
 private:
+	struct Joint {
+		gp_Trsf local;
+		gp_Trsf global;
+		std::string label;
+		BuildingTool* parent;
+
+		Joint() {};
+		Joint(gp_Trsf local, gp_Trsf global, std::string label, BuildingTool* parent) : 
+			local(local), global(global), label(label), parent(parent) {};
+	};
 
 	struct FilletData {
 		int wireIdx;
@@ -434,6 +444,9 @@ private:
 
 	Standard_Real x, y;
 	std::vector<FilletData> filletsData;
+	gp_Trsf transformation; 
+	gp_Trsf connection;
+	std::vector<BuildingTool*> connected;
 
 	void addFilletAlgo(gp_Pnt p, Standard_Real radius) {
 		if (radius) {
@@ -447,6 +460,17 @@ private:
 		}
 	}
 
+	void applyParentTransform(const gp_Trsf& parentGlobal) {
+		transformation = parentGlobal * connection;
+		prism = prism.Located(TopLoc_Location(transformation));
+		for (auto& [label, j] : joints) {
+			j.global = transformation * j.local;
+		}
+		for (BuildingTool* p : connected) {
+			p->applyParentTransform(transformation);
+		}
+	}
+
 public:
 
 	std::vector<std::vector<gp_Pnt>> vertices;
@@ -454,14 +478,15 @@ public:
 	std::vector<TopoDS_Wire> wires;
 	TopoDS_Face face;
 	TopoDS_Shape prism;
+	std::unordered_map<std::string, Joint> joints;
 
-	/// Initialize an empty BuildingTool
+	///Initialize an empty BuildingTool with position at 0,0
 	BuildingTool() {
 		this->x = 0;
 		this->y = 0;
 	}
 
-	/// Initialize the BuildingTool and move to the given position
+	///Initialize the BuildingTool and move to the given position
 	BuildingTool(Standard_Real x, Standard_Real y) {
 		this->x = x;
 		this->y = y;
@@ -470,7 +495,7 @@ public:
 		edges.push_back(std::vector<TopoDS_Edge>{});
 	}
 
-	/// Draw a rectangle as a new wire at the absolute given position
+	///Draw a rectangle as a new wire at the absolute given position
 	void rectangle(Standard_Real w, Standard_Real h, Standard_Real x = 0, Standard_Real y = 0) {
 
 		std::vector<gp_Pnt> vv;
@@ -489,17 +514,20 @@ public:
 		edges.push_back(ee);
 	}
 
+	///Draw a circle as a new wire at the absolute given position
 	void circle(Standard_Real r, Standard_Real x = 0, Standard_Real y = 0) {
 		
 		BRepBuilderAPI_MakeWire mkWire;
 		gp_Circ circle(gp_Ax2(gp_Pnt(x, y, 0), gp_Dir(0, 0, 1)), r);
 		BRepBuilderAPI_MakeEdge mkEdge(circle);
 		std::vector<TopoDS_Edge> ee = { mkEdge.Edge() };
+		this->x = x;
+		this->y = y;
 
 		edges.push_back(ee);
 	}
 
-	/// Move to the absolute position and start a new wire
+	///Move to the absolute position and start a new wire
 	void moveTo(Standard_Real x, Standard_Real y) {
 		this->x = x;
 		this->y = y;
@@ -508,7 +536,7 @@ public:
 		edges.push_back(std::vector<TopoDS_Edge>{});
 	}
 
-	/// Draw a line to the position relative to the current position and optionally set the fillet radius to the last vertex
+	///Draw a line to the position relative to the current position and optionally set the fillet radius to the last vertex
 	void lineTo(Standard_Real x, Standard_Real y, Standard_Real radius = 0) {
 		gp_Pnt p1(this->x, this->y, 0);
 		this->x += x;
@@ -522,7 +550,7 @@ public:
 		addFilletAlgo(p2, radius);
 	}
 
-	/// Draw a line to the absolute position and optionally set the fillet radius to the last vertex
+	///Draw a line to the absolute position and optionally set the fillet radius to the last vertex
 	void LineTo(Standard_Real x, Standard_Real y, Standard_Real radius = 0) {
 		gp_Pnt p1(this->x, this->y, 0);
 		this->x = x;
@@ -536,7 +564,7 @@ public:
 		addFilletAlgo(p2, radius);
 	}
 
-	// Draw an elliptical arc from the current position to the absolute postion giving radii and center point of the ellipse. Optionally the fillet radius of the last vertex
+	///Draw an elliptical arc from the current position to the absolute postion giving radii and center point of the ellipse. Optionally the fillet radius of the last vertex
 	void arcTo(Standard_Real x, Standard_Real y, Standard_Real rx, Standard_Real ry, gp_Pnt center, Standard_Real filletRadius = 0) {
 		
 		Standard_Real majorRad = rx, minorRad = ry;
@@ -558,7 +586,7 @@ public:
 		addFilletAlgo(p2, filletRadius);
 	}
 
-	/// Close the wire with a line and optionally apply the fillet radius to the last vertex
+	///Close the wire with a line and optionally apply the fillet radius to the last vertex
 	void close(Standard_Real radius = 0) {
 
 		BRepBuilderAPI_MakeEdge mkEdge(gp_Pnt(this->x, this->y, 0), vertices.back()[0]);
@@ -575,7 +603,7 @@ public:
 		}
 	}
 
-	/// Construct fillets and wires and optionally face and prism and populate the class members
+	///Construct fillets and wires and optionally face and prism and populate the class members
 	void build(Standard_Real extrude = 0) {
 
 		// Perform fillet and add new edges
@@ -626,8 +654,68 @@ public:
 		}
 	}
 
+	///Return current position
 	gp_Pnt getCurrentPos() {
 		return gp_Pnt(x, y, 0);
+	}
+
+	///Return current X position
+	Standard_Real X() {
+		return x;
+	}
+
+	///Return current Y position
+	Standard_Real Y() {
+		return y;
+	}
+
+	void rotate(Standard_Real x = 0, Standard_Real y = 0, Standard_Real z = 0) {
+		gp_Trsf tr;
+		Standard_Real a = x * M_PI / 180.0f;
+		Standard_Real b = y * M_PI / 180.0f;
+		Standard_Real c = z * M_PI / 180.0f;
+		gp_Quaternion q;
+		q.SetEulerAngles(gp_Extrinsic_XYZ, a, b, c);
+		tr.SetRotationPart(q);
+
+		transformation *= tr;
+		prism = prism.Located(TopLoc_Location(transformation));
+
+		for (auto& [label, j] : joints) {
+			j.global = transformation * j.local;
+		}
+
+		applyParentTransform(transformation);
+	}
+
+	void addJoint(std::string label, Standard_Real x, Standard_Real y, Standard_Real z = 0, Standard_Real xr = 0, Standard_Real yr = 0, Standard_Real zr = 0) {
+		gp_Trsf tr;
+
+		Standard_Real a = xr * M_PI / 180.0f;
+		Standard_Real b = yr * M_PI / 180.0f;
+		Standard_Real c = zr * M_PI / 180.0f;
+		gp_Quaternion q;
+		q.SetEulerAngles(gp_Extrinsic_XYZ, a, b, c);
+		tr.SetRotationPart(q);
+
+		tr.SetTranslationPart(gp_Vec(x, y, z));
+
+		Joint j(tr, transformation * tr, label, this);
+
+		joints.insert({ label, j });
+	}
+
+	/// Connect shapes by their joints j1 and j2, being the part to which belongs j2 the one that remains static.
+	void rigidJoint(Joint& j1, Joint& j2) {
+		BuildingTool* parent = j2.parent;
+		parent->connected.push_back(this);
+
+		transformation = parent->transformation * j2.local * j1.local.Inverted();
+		connection = parent->transformation.Inverted() * transformation;
+		prism = prism.Located(TopLoc_Location(transformation));
+
+		for (auto& [label, j] : joints)
+			j.global = transformation * j.local;
 	}
 };
 

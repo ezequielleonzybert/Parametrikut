@@ -9,6 +9,7 @@
 
 #include <Standard_WarningsDisable.hxx>
 #include <QWidget>
+#include <QLabel>
 #include <Standard_WarningsRestore.hxx>
 
 #include <AIS_InteractiveContext.hxx>
@@ -32,7 +33,7 @@ class OcctQWidgetViewer : public QWidget, public AIS_ViewController
     Q_OBJECT
 public:
     //! Main constructor.
-    OcctQWidgetViewer(QWidget* theParent = nullptr);
+    OcctQWidgetViewer(Assembly* assembly, QWidget* theParent = nullptr);
 
     //! Destructor.
     virtual ~OcctQWidgetViewer();
@@ -61,7 +62,7 @@ public:
         const Handle(V3d_View)& theNewView) override;
 
     //draw assembly
-    void displayAssembly(Assembly assembly);
+    void displayAssembly();
 
 protected: // drawing events
     //! Initial OpenGL setup.
@@ -103,7 +104,52 @@ private:
     Handle(V3d_View) myFocusView;
 
     QString myGlInfo;
-    bool    myIsCoreProfile = true;
+    bool myIsCoreProfile = true;
+    bool measuring = false;
+    Assembly* assembly;
+
+    struct Measure {
+
+        QLabel* label = nullptr;
+        float x, y, z;
+
+        Measure(float x, float y, float z, QWidget* parent) : x(x),y(y),z(z) {
+            QString text = QString("X = %1\nY = %2\nZ = %3")
+                      .arg(x, 0, 'f', 3)
+                      .arg(y, 0, 'f', 3)
+                      .arg(z, 0, 'f', 3);
+
+            label = new QLabel(text, parent);
+            label->setWindowFlags(Qt::Dialog | Qt::FramelessWindowHint | Qt::WindowStaysOnTopHint);
+            label->setAttribute(Qt::WA_ShowWithoutActivating);
+            label->setStyleSheet("background-color: white; color: black; border: 1px solid gray; padding: 5px;");
+            label->move(QCursor::pos());
+            label->adjustSize();
+            label->show();
+        }
+
+        ~Measure() {
+            if (label) {
+                label->deleteLater();
+                label = nullptr;
+            }
+        }
+
+        void second(float x2, float y2, float z2) {
+            float dx = x2 - x;
+            float dy = y2 - y;
+            float dz = z2 - z;
+            QString text = QString("\u0394X = %1\n\u0394Y = %2\n\u0394Z = %3")
+                .arg(dx, 0, 'f', 3)
+                .arg(dy, 0, 'f', 3)
+                .arg(dz, 0, 'f', 3);
+            label->setText(text);
+            label->adjustSize();
+            label->show();
+        }
+    };
+
+    Measure* measure = nullptr;
 };
 
 #endif 

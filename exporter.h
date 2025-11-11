@@ -9,6 +9,8 @@ public:
     ~Exporter() = default;
 
     void add(const std::vector<TopoDS_Wire>& wires);
+
+    /// Receives the edges to export to an SVG file. They must be already ordered by wires and continuity
     void add(const std::vector<std::vector<TopoDS_Edge>>& edges);
     bool exportToFile(const QString& filename) const;
 

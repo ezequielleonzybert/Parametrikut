@@ -17,7 +17,7 @@ struct Assembly{
 	std::vector<TopoDS_Wire> outlines;
 	std::vector<std::vector<TopoDS_Edge>> edges;
 
-	std::vector<Part> parts;
+	std::vector<BuildingTool> parts;
 	std::vector<Param> params;
 
 	Standard_Real thickness;
@@ -37,11 +37,10 @@ struct Assembly{
 
 	int levels;
 	int backPinsQ;
-	int frontPinsQ;
+	//int frontPinsQ;
 	int tabs;
 
 	Standard_Real inWidth;
-	//Standard_Real inDepth;
 	Standard_Real width;
 	Standard_Real depth;
 	Standard_Real height;
@@ -60,5 +59,8 @@ struct Assembly{
 	void cadCode();
 	void cadcode2();
 	Part shelf(Standard_Real h);
+
+private:
+	void recalculateParams();
 };
 

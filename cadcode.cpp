@@ -384,15 +384,15 @@ void Assembly::cadCode()
 
 #pragma endregion
 
-	parts.push_back(Lateral1);
-	parts.push_back(Lateral2);
-	parts.push_back(Back);
-	for (int i = 0; i < levels; i++) {
-		parts.push_back(shelves[i]);
-		parts.push_back(fronts[i]);
-	}
+	//parts.push_back(Lateral1);
+	//parts.push_back(Lateral2);
+	//parts.push_back(Back);
+	//for (int i = 0; i < levels; i++) {
+	//	parts.push_back(shelves[i]);
+	//	parts.push_back(fronts[i]);
+	//}
 
-	outlines = section(packed);
+	//outlines = section(packed);
 
 	//for(auto& w : outlines)	parts.push_back(w);
 }

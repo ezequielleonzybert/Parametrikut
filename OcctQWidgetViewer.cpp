@@ -15,11 +15,11 @@
 
 #include <Standard_WarningsDisable.hxx>
 #include <QApplication>
-#include <QMessageBox>
 #include <QMouseEvent>
 #include <Standard_WarningsRestore.hxx>
 
 #include <AIS_Shape.hxx>
+#include <AIS_Point.hxx>
 #include <Aspect_DisplayConnection.hxx>
 #include <Aspect_NeutralWindow.hxx>
 #include <BRepPrimAPI_MakeBox.hxx>
@@ -31,9 +31,11 @@
 #include <TopExp.hxx>
 #include <TopoDS_Wire.hxx>
 #include <TopoDS.hxx>
+#include <Geom_CartesianPoint.hxx>
+#include <Prs3d_PointAspect.hxx>
 
-OcctQWidgetViewer::OcctQWidgetViewer(QWidget* theParent)
-    : QWidget(theParent)
+OcctQWidgetViewer::OcctQWidgetViewer(Assembly* assembly, QWidget* theParent)
+    : QWidget(theParent), assembly(assembly)
 {
     Handle(Aspect_DisplayConnection) aDisp = new Aspect_DisplayConnection();
     Handle(OpenGl_GraphicDriver)     aDriver = new OpenGl_GraphicDriver(aDisp, false);
@@ -142,35 +144,56 @@ void OcctQWidgetViewer::initializeGL()
     }
 }
 
-void OcctQWidgetViewer::displayAssembly(Assembly assembly) {
+void OcctQWidgetViewer::displayAssembly() {
 
 	myContext->RemoveAll(false);
 
-    int parts = int(assembly.parts.size());
+    int parts = int(assembly->parts.size());
 
     for (int i = 0; i < parts; i++) {
-        Handle(AIS_Shape) shape = new AIS_Shape(assembly.parts[i].Shape());
+        TopoDS_Shape prism = assembly->parts[i].prism;
+        Handle(AIS_Shape) shape = new AIS_Shape(prism);
         shape->SetMaterial(Graphic3d_NOM_CHARCOAL);
         shape->SetColor(Quantity_Color(50, 1, 1, Quantity_TOC_HLS));
         myContext->Display(shape, AIS_Shaded, -1, false);
 
         TopTools_IndexedMapOfShape wireMap;
-        TopExp::MapShapes(assembly.parts[i].Shape(), TopAbs_WIRE, wireMap);
+        TopExp::MapShapes(prism, TopAbs_WIRE, wireMap);
 
         for (int j = 1; j <= wireMap.Extent(); ++j) {
             TopoDS_Wire wireTopo = TopoDS::Wire(wireMap(j));
             Handle(AIS_Shape) wire = new AIS_Shape(wireTopo);
             wire->SetColor(Quantity_Color(0.3,0.3,0.3, Quantity_TOC_RGB));
-            //stroke width?
             myContext->Display(wire, AIS_WireFrame, -1, false);
         }
 
-        // joint mark
-        if (false) {
-            for (auto& [label, jointPtr] : assembly.parts[i].joints) {
+        if (measuring) {
+
+            // Vertices
+            for (TopExp_Explorer vertexExp(prism, TopAbs_VERTEX); vertexExp.More(); vertexExp.Next()) {
+                TopoDS_Vertex vertexTopo = TopoDS::Vertex(vertexExp.Current());
+                gp_Pnt p = BRep_Tool::Pnt(vertexTopo);
+                Handle(Geom_CartesianPoint) gPoint = new Geom_CartesianPoint(p);
+                Handle(AIS_Point) aisPoint = new AIS_Point(gPoint);
+
+                // crear aspecto del punto
+                Handle(Prs3d_PointAspect) pointAspect = new Prs3d_PointAspect(
+                    Aspect_TOM_POINT,
+                    Quantity_NOC_BLACK,
+                    2
+                );
+
+                // asignar aspecto al AIS_Point
+                aisPoint->Attributes()->SetPointAspect(pointAspect);
+
+                myContext->Display(aisPoint, Standard_False);
+                myContext->Activate(aisPoint, 0, true);
+            }
+
+            // joint mark
+            for (auto& [label, jointPtr] : assembly->parts[i].joints) {
                 float length = 10;
                 gp_Trsf joint = jointPtr.global;
-                //gp_XYZ xyz = joint.TranslationPart();
                 gp_XYZ xyz(0, 0, 0);
                 gp_Quaternion q = joint.GetRotation();
 
@@ -205,7 +228,6 @@ void OcctQWidgetViewer::displayAssembly(Assembly assembly) {
             }
         }       
     }
-
     myView->Redraw();
 }
 
@@ -216,6 +238,10 @@ void OcctQWidgetViewer::closeEvent(QCloseEvent* theEvent)
 
 void OcctQWidgetViewer::keyPressEvent(QKeyEvent* theEvent)
 {
+    if (theEvent->key() == Qt::Key_Space) {
+        measuring = !measuring;
+    }
+    displayAssembly();
 }
 
 void OcctQWidgetViewer::mousePressEvent(QMouseEvent* theEvent)
@@ -240,6 +266,37 @@ void OcctQWidgetViewer::mouseReleaseEvent(QMouseEvent* theEvent)
     const Aspect_VKeyFlags aFlags = OcctQtTools::qtMouseModifiers2VKeys(theEvent->modifiers());
     if (UpdateMouseButtons(aPnt, OcctQtTools::qtMouseButtons2VKeys(theEvent->buttons()), aFlags, false))
         updateView();
+
+    //myContext->MoveTo(aPnt.x(), aPnt.y(), myView, Standard_True);
+    //myContext->SelectDetected(AIS_SelectionScheme_Replace);
+    //myView->Redraw();
+
+    if (theEvent->button() == Qt::LeftButton && measuring) {
+        if (myContext->HasDetected())
+        {
+            Handle(AIS_InteractiveObject) detected = myContext->DetectedInteractive();
+            Handle(AIS_Point) aisPoint = Handle(AIS_Point)::DownCast(detected);
+            if (!aisPoint.IsNull())
+            {
+                gp_Pnt p = BRep_Tool::Pnt(aisPoint->Vertex());
+
+                if (measure) {
+                    measure->second(p.X(), p.Y(), p.Z());
+                }
+                else {
+                    measure = new Measure(p.X(), p.Y(), p.Z(), this);
+                }
+                return;
+            }
+        }
+    }
+
+    else if (theEvent->button() == Qt::RightButton && measuring) {
+        if (measure) {
+            delete measure;
+            measure = nullptr;
+        }
+    }
 }
 
 void OcctQWidgetViewer::mouseMoveEvent(QMouseEvent* theEvent)

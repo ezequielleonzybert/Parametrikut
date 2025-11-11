@@ -4,42 +4,50 @@
 void Assembly::cadcode2() {
 
 	bool doFillet = true;
-	Standard_Real f1 = 1, f2 = thickness;
+	Standard_Real f1 = 1, f2 = tabWidth/3;
 
 #pragma region Back
 
-	// outer Wire
-	BuildingTool btBack(-inWidth / 2, 0);
-	btBack.lineTo(inWidth, 0, f2);
-	btBack.lineTo(0, slotLength / 2);
+	Part Back;
 
-	Standard_Real ySpacing = (sideHeight - slotLength * tabs + slotLength / 3 * tabs) / (tabs - 1);
-	for (int i = 0; i < tabs; i++) {
-		btBack.lineTo(slotThicknessLoose, 0);
-		btBack.lineTo(0, -slotLength / 3, f1);
-		btBack.lineTo(tabWidth, 0, f2);
-		btBack.lineTo(0, slotLength, f2);
-		btBack.lineTo(-tabWidth - slotThicknessLoose, 0);
+	// outer Wire
+	BuildingTool back(-inWidth / 2, 0);
+	back.lineTo(inWidth, 0, f2);
+	back.lineTo(0, slotLength / 2);
+
+	// Back tabs
+	std::vector<gp_Pnt> backTabsLocs;
+	//Standard_Real ySpacing = (sideHeight - slotLength / 12 - slotLength * (tabs+1)+slotLength / 3 * (tabs - 1)) / (tabs - 1); // take the measure to check WRONG
+	Standard_Real ySpacing = sideHeight - slotLength - (slotLength * 2 / 3) * tabs;
+;	for (int i = 0; i < tabs; i++) {
+		back.addJoint("tab" + std::to_string(i*2), back.X() + slotThicknessLoose / 2, back.Y(), thickness / 2, -90);
+		back.addJoint("tab" + std::to_string(i*2+1), -back.X() - slotThicknessLoose / 2, back.Y(), thickness / 2, -90);
+		back.lineTo(slotThicknessLoose, 0);
+		back.lineTo(0, -slotLength / 3, f1);
+		back.lineTo(tabWidth, 0, f2);
+		back.lineTo(0, slotLength, f2);
+		back.lineTo(-tabWidth - slotThicknessLoose, 0);
+		backTabsLocs.push_back(gp_Pnt(back.X(), back.Y()-slotLength/2, 0));
 		if (i != tabs - 1) {
-			btBack.lineTo(0, ySpacing);
+			back.lineTo(0, ySpacing);
 		}
 	}
 
-	btBack.lineTo(0, slotLength / 2 + signHeight, f2);
-	btBack.lineTo(-inWidth, 0, f2);
-	btBack.lineTo(0, -slotLength / 2 - signHeight);
+	back.lineTo(0, slotLength/2 + signHeight, f2);
+	back.lineTo(-inWidth, 0, f2);
+	back.lineTo(0, -slotLength / 2 - signHeight );
 
 	for (int i = 0; i - tabs; i++) {
-		btBack.lineTo(-tabWidth - slotThicknessLoose, 0, f2);
-		btBack.lineTo(0, -slotLength, f2);
-		btBack.lineTo(tabWidth, 0, f1);
-		btBack.lineTo(0, slotLength / 3);
-		btBack.lineTo(slotThicknessLoose, 0);
+		back.lineTo(-tabWidth - slotThicknessLoose, 0, f2);
+		back.lineTo(0, -slotLength, f2);
+		back.lineTo(tabWidth, 0, f1);
+		back.lineTo(0, slotLength / 3);
+		back.lineTo(slotThicknessLoose, 0);
 		if (i != tabs - 1) {
-			btBack.lineTo(0, -ySpacing);
+			back.lineTo(0, -ySpacing);
 		}
 	}
-	btBack.close(f2);
+	back.close(f2);
 
 	// backSlots
 	std::vector<gp_Pnt> backSlotsLocs;
@@ -49,12 +57,12 @@ void Assembly::cadcode2() {
 		for (int j = 0; j < backPinsQ; j++) {
 			Standard_Real spacing = (backWidth - backPinsQ * pinLength) / (backPinsQ + 1);
 			Standard_Real x = backWidth / 2 - pinLength / 2 - spacing * (j + 1) - j * pinLength;
-			btBack.rectangle(pinLength, slotThicknessLoose, x, y);
+			back.rectangle(pinLength, slotThicknessLoose, x, y);
 			backSlotsLocs.push_back(gp_Pnt(x, y, 0));
 		}
 	}
 
-	btBack.build(thickness);
+	back.build(thickness);
 
 #pragma endregion
 
@@ -62,8 +70,9 @@ void Assembly::cadcode2() {
 
 	// Outer Wire
 	Standard_Real slotEdgeSpacing = thickness * 2;
+	Standard_Real shelvesStartX = tabWidth + looseDiff / 2 + thickness;
 
-	BuildingTool btLateral;
+	BuildingTool lateral;
 
 	// Calculate Bottom Front Slot, needed to calculate the lateral total depth and ellipse rx:
 	Standard_Real latFrontSlotX = tabWidth + looseDiff/2 + slotEdgeSpacing + botShelfDepth;
@@ -88,72 +97,117 @@ void Assembly::cadcode2() {
 	depth = topShelfDepth + tabWidth + looseDiff + thickness * 2 + ellipseRadX;
 
 	// Ellipse arcs and shelves slides
-	btLateral.moveTo(0, 0);
-	btLateral.lineTo(depth, 0, f2);
+	lateral.moveTo(0, 0);
+	lateral.lineTo(depth, 0, f2);
 
-	gp_Pnt center(btLateral.getCurrentPos().Translated({-ellipseRadX,0,0}));
+	gp_Pnt center(lateral.getCurrentPos().Translated({-ellipseRadX,0,0}));
 	Ellipse2 ellipse(center, ellipseRadX, ellipseRadY);
 
 	std::vector<gp_Pnt> lateralFrontSlotsLocs;
 	Standard_Real lastSlideTopY;
 	for (int i = 0; i < levels; i++) {
 
-		Standard_Real y = center.Y() + backSlotsLocs[i*2].Y() - slotThicknessLoose / 2;
+		Standard_Real y = backSlotsLocs[i*backPinsQ].Y() - slotThicknessLoose / 2;
 		Standard_Real x = center.X() + ellipse.getRadiusX(y);
-		btLateral.arcTo(x, y, ellipseRadX, ellipseRadY, center, f1);
-	
-		btLateral.LineTo(tabWidth + looseDiff / 2 + thickness + botShelfDepth / 2, y); //wrong
-		btLateral.lineTo(0, slotThicknessLoose);
-		y = btLateral.getCurrentPos().Y();
-		x = center.X() + ellipse.getRadiusX(y);
-		btLateral.LineTo(x, y, f1);
-		if (i == levels - 1) lastSlideTopY = y;
+		lateral.arcTo(x, y, ellipseRadX, ellipseRadY, center, f1);
 
 		// prepare front slots locations for next step
-		Standard_Real slotCornerY = y + slotEdgeSpacing + slotLength;
-		x = center.X() + ellipse.getRadiusX(slotCornerY) - slotEdgeSpacing;
-		y += slotEdgeSpacing + slotLength / 2;
-		lateralFrontSlotsLocs.push_back(gp_Pnt(x, y, 0));
+		Standard_Real slotCornerY = lateral.Y() + slotThicknessLoose + slotEdgeSpacing + slotLength;
+		Standard_Real slotMidX = center.X() + ellipse.getRadiusX(slotCornerY) - slotEdgeSpacing;
+		Standard_Real slotMidY = lateral.Y() + slotThicknessLoose + slotEdgeSpacing + slotLength / 2;
+		if(i < levels-1)
+			lateralFrontSlotsLocs.push_back(gp_Pnt(slotMidX, slotMidY, 0));
+	
+		// slides
+		if (i < levels - 1) {
+			Standard_Real ShelfWidth = lateralFrontSlotsLocs[i].X() - thickness / 2 - shelvesStartX; // thickness or slotThickness? wrong
+			lateral.LineTo(shelvesStartX + ShelfWidth/2, lateral.Y());
+		}
+		else {
+			lateral.LineTo(shelvesStartX + topShelfDepth/2, lateral.Y());
+		}
+		lateral.lineTo(0, slotThicknessLoose);
+		y = lateral.Y();
+		x = center.X() + ellipse.getRadiusX(y);
+		lateral.LineTo(x, y, f1);
+		if (i == levels - 1) lastSlideTopY = y;
 	}
 
-	btLateral.arcTo(
+	lateral.arcTo(
 		center.X(),
 		center.Y() + ellipseRadY,
 		ellipseRadX, ellipseRadY,
-		center
+		center,
+		f1
 	);
 
-	btLateral.LineTo(btLateral.getCurrentPos().X(), lastSlideTopY + slotEdgeSpacing);
-	btLateral.lineTo(-slotThicknessLoose, 0);
-	btLateral.LineTo(btLateral.getCurrentPos().X(), sideHeight);
-	btLateral.LineTo(0, sideHeight);
-	btLateral.close();
+	lateral.LineTo(lateral.X(), lastSlideTopY + slotEdgeSpacing);
+	lateral.lineTo(-slotThicknessLoose, 0);
+	lateral.LineTo(lateral.X(), sideHeight, f1);
+	lateral.LineTo(0, sideHeight, f2);
+	lateral.close(f2);
 
 
-	// Lateral Front Slots:
+	// Lateral front slots:
 	for (int i = 0; i < levels-1; i++) {
-
 		Standard_Real x = lateralFrontSlotsLocs[i].X();
 		Standard_Real y = lateralFrontSlotsLocs[i].Y();
-		btLateral.rectangle(latFrontSlotW, latFrontSLotH, x, y);
-
+		lateral.rectangle(latFrontSlotW, latFrontSLotH, x, y);
 	}
 
-	btLateral.build(thickness);
+	// Lateral back slots
+	for (int i = 0; i < tabs; i++) {
+		Standard_Real x = tabWidth + slotThicknessLoose / 2;
+		Standard_Real y = backTabsLocs[i].Y() + slotLength/3;
+		lateral.rectangle(slotThicknessLoose, slotLength, x, y);
+		lateral.addJoint("frontSlot"+std::to_string(i), x, y-slotLength/2, thickness / 2,-90,90,0);
+	}
+
+	lateral.build(thickness);
+
+#pragma endregion
+
+#pragma region Shelves
+
+	std::vector<BuildingTool> shelves(levels);
+
+	int pinsQ = 1;
+	Standard_Real frontPinsSpacing = 0;
+	Standard_Real frontPinX = 0;
+	if (pinsQ * pinLength < inWidth / 4 / 3) {
+		pinsQ++;
+		frontPinX = inWidth / 4 - pinLength / 2;
+		frontPinsSpacing = inWidth / 4 - pinsQ * pinLength;
+	}
+
+	BuildingTool shelf(-inWidth / 2, 0);
+	for (int i = 0; i < pinsQ; i++) {
+		shelf.lineTo(frontPinX - pinLength / 2, 0);
+		shelf.lineTo(0, -thickness);
+		shelf.lineTo(pinLength, 0);
+		shelf.lineTo(0, thickness);
+	}
 
 
 #pragma endregion
 
-	//parts.push_back(btBack.prism);
-	//for (auto w : btLateral.wires) {
-	//	parts.push_back(w);
-	//}
-	//for (auto ee : btLateral.edges) {
-	//	for (auto e : ee) {
-	//		parts.push_back(e);
-	//	}
-	//}
-	parts.push_back(btLateral.prism);
-	//edges = btBack.edges;
+#pragma region Assembly
+
+	back.rotate(90);
+
+	lateral.rigidJoint(lateral.joints["frontSlot0"], back.joints["tab0"]);
+
+#pragma endregion
+
+	parts.push_back(back);
+	parts.push_back(lateral);
+
+	//edges must be poblated to export SVG
+	for (auto ee : back.edges) {
+		edges.push_back(ee);
+	}
+	for (auto ee : lateral.edges) {
+		edges.push_back(ee);
+	}
 
 }

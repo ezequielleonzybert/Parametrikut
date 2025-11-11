@@ -4,11 +4,6 @@ Assembly::Assembly()
 {
 	thickness = 3.12f;
 	tabWidth = 10.f;
-	railingHeight = 15.f;
-	slotThicknessLoose = thickness + .5f;
-	slotThicknessMid = thickness;
-	slotThicknessTight = thickness - .5f;
-	looseDiff = slotThicknessLoose - thickness;
 	slotLength = 30.f;
 	pinLength = slotLength * 1.5f;
 	shelvesSpacing = 100.f;
@@ -18,14 +13,12 @@ Assembly::Assembly()
 
 	levels = 3;
 	backPinsQ = 2;
-	frontPinsQ = std::min(std::max(1,backPinsQ-1),2);
+	//frontPinsQ = std::min(std::max(1,backPinsQ-1),2);
 	tabs = 2;
 
 	inWidth = 200.f;
 
-	width = inWidth + tabWidth*2 + thickness*2;
-	height = tabWidth*2 + shelvesSpacing * (levels - 1) + thickness * levels + signHeight;
-	sideHeight = height - signHeight - tabWidth + railingHeight;
+	recalculateParams();
 
 	addParam("Thickness", thickness);
 	addParam("Inner width", inWidth);
@@ -58,13 +51,7 @@ void Assembly::build()
 	topShelfDepth = getParamValf("Top shelf depth");
 	botShelfDepth = getParamValf("Bottom shelf depth");
 
-	slotThicknessLoose = thickness + .5f;
-	slotThicknessMid = thickness;
-	slotThicknessTight = thickness - .5f; 
-
-	width = inWidth + tabWidth * 2 + thickness * 2;
-	height = tabWidth*2 + shelvesSpacing * (levels-1) +thickness * levels + signHeight;
-	sideHeight = height - signHeight - tabWidth + railingHeight;
+	recalculateParams();
 
 	cadcode2();
 }
@@ -93,4 +80,15 @@ Standard_Real Assembly::getParamValf(const char* name) {
 		}
 	}
 	return -1;
+}
+
+void Assembly::recalculateParams() {
+	slotThicknessLoose = thickness + .5f;
+	slotThicknessMid = thickness;
+	slotThicknessTight = thickness - .5f;
+	railingHeight = thickness * 4;
+	looseDiff = slotThicknessLoose - thickness;
+	width = inWidth + tabWidth * 2 + thickness * 2;
+	height = tabWidth + shelvesSpacing * (levels - 1) + thickness * levels + railingHeight + signHeight;
+	sideHeight = height - signHeight;
 }

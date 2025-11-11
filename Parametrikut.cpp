@@ -45,8 +45,8 @@ Parametrikut::Parametrikut(QWidget *parent)
 
     centralLayout->addWidget(leftWidget, 1);
 
-    viewer = new OcctQWidgetViewer(centralWidget);
-    viewer->displayAssembly(*assembly); //first display
+    viewer = new OcctQWidgetViewer(assembly, centralWidget);
+    viewer->displayAssembly(); //first display
 
     centralLayout->addWidget(viewer, 4);
     viewer->update();
@@ -120,7 +120,7 @@ void Parametrikut::buildGrid(std::vector<Param> &params) {
                     assembly->params[i].vali = vali;
                 }
                 assembly->build();
-                viewer->displayAssembly(*assembly);
+                viewer->displayAssembly();
             }
         });
 
