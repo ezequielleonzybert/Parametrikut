@@ -150,6 +150,8 @@ private:
     };
 
     Measure* measure = nullptr;
+    bool mouseDragged = false;
+    bool mousePressed = false;
 };
 
 #endif 

@@ -291,11 +291,14 @@ void OcctQWidgetViewer::mouseReleaseEvent(QMouseEvent* theEvent)
         }
     }
 
-    else if (theEvent->button() == Qt::RightButton && measuring) {
+    else if (theEvent->button() == Qt::RightButton && measuring && !mouseDragged) {
         if (measure) {
             delete measure;
             measure = nullptr;
         }
+    }
+    else if (mouseDragged) {
+        mouseDragged = false;
     }
 }
 
@@ -312,6 +315,10 @@ void OcctQWidgetViewer::mouseMoveEvent(QMouseEvent* theEvent)
         false))
     {
         updateView();
+    }
+
+    if (theEvent->buttons() & Qt::RightButton) {
+        mouseDragged = true;
     }
 }
 
