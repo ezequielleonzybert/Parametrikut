@@ -2,6 +2,7 @@
 #include <QString>
 #include <TopoDS_Wire.hxx>
 #include <HLRBRep_CurveTool.hxx>
+#include "Assembly.h"
 
 class Exporter {
 public:
@@ -11,12 +12,12 @@ public:
     void add(const std::vector<TopoDS_Wire>& wires);
 
     /// Receives the edges to export to an SVG file. They must be already ordered by wires and continuity
-    void add(const std::vector<std::vector<TopoDS_Edge>>& edges);
+    void add(Assembly* assembly);
     bool exportToFile(const QString& filename) const;
 
 private:
     std::vector<TopoDS_Wire> wires;
-    std::vector<std::vector<TopoDS_Edge>> edges;
+    std::vector<std::vector<std::vector<TopoDS_Edge>>> edges;
     float width;
     float height;
     float minX, maxX, minY, maxY;

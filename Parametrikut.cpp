@@ -66,7 +66,7 @@ Parametrikut::Parametrikut(QWidget *parent)
             "SVG Files (*.svg);;All Files (*)"
         );
         Exporter exporter;
-        exporter.add(assembly->edges);
+        exporter.add(assembly);
         exporter.exportToFile(filePath);
     });
 }

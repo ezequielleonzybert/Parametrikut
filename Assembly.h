@@ -15,7 +15,7 @@ struct Param {
 struct Assembly{
 
 	std::vector<TopoDS_Wire> outlines;
-	std::vector<std::vector<TopoDS_Edge>> edges;
+	std::vector<std::vector<std::vector<TopoDS_Edge>>> edges;
 
 	std::vector<BuildingTool> parts;
 	std::vector<Param> params;

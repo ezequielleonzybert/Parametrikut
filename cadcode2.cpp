@@ -3,7 +3,7 @@
 
 void Assembly::cadcode2() {
 
-	Standard_Real f1 = 1, f2 = tabWidth / 3;
+	Standard_Real f1 = thickness/3, f2 = tabWidth / 3;
 
 #pragma region Back
 
@@ -16,7 +16,7 @@ void Assembly::cadcode2() {
 
 	// Back tabs
 	std::vector<gp_Pnt> backTabsLocs;
-	Standard_Real ySpacing = (sideHeight - slotLength - (slotLength * 2 / 3) * tabs) / (tabs - 1);
+	Standard_Real ySpacing = (sideHeight - slotLength*1.5 - (2*slotLength / 3) * tabs) / (tabs - 1);
 	;	for (int i = 0; i < tabs; i++) {
 		back.addJoint("tab" + std::to_string(i * 2), back.X() + slotThicknessLoose / 2, back.Y(), thickness / 2, -90);
 		back.addJoint("tab" + std::to_string(i * 2 + 1), -back.X() - slotThicknessLoose / 2, back.Y(), thickness / 2, -90);
@@ -31,9 +31,9 @@ void Assembly::cadcode2() {
 		}
 	}
 
-	back.lineTo(0, slotLength / 2 + signHeight, f2);
+	back.lineTo(0, slotLength + signHeight, f2);
 	back.lineTo(-inWidth, 0, f2);
-	back.lineTo(0, -slotLength / 2 - signHeight);
+	back.lineTo(0, -slotLength - signHeight);
 
 	for (int i = 0; i - tabs; i++) {
 		back.lineTo(-tabWidth - slotThicknessLoose, 0, f2);
@@ -73,7 +73,7 @@ void Assembly::cadcode2() {
 	BuildingTool lateral;
 
 	// Calculate Bottom Front Slot, needed to calculate the lateral total depth and ellipse rx:
-	Standard_Real latFrontSlotX = tabWidth + looseDiff / 2 + slotEdgeSpacing + botShelfDepth;
+	Standard_Real latFrontSlotX = tabWidth + looseDiff / 2 + slotEdgeSpacing + botShelfDepth; // WRONG
 	Standard_Real latFrontSlotY = backSlotsLocs[0].Y() + slotLength / 2 + thickness * 1.5;
 	Standard_Real latFrontSlotW = slotThicknessLoose;
 	Standard_Real latFrontSLotH = slotLength;
@@ -144,6 +144,7 @@ void Assembly::cadcode2() {
 	);
 
 	lateral.LineTo(lateral.X(), lastSlideTopY + slotEdgeSpacing);
+	lateral.addJoint("frontSlot"+std::to_string(levels-1), lateral.X() - slotThicknessLoose / 2, lateral.Y(), thickness/2, -90, 90, 0);
 	lateral.lineTo(-slotThicknessLoose, 0);
 	lateral.LineTo(lateral.X(), sideHeight, f1);
 	lateral.LineTo(0, sideHeight, f2);
@@ -155,6 +156,7 @@ void Assembly::cadcode2() {
 		Standard_Real x = lateralFrontSlotsLocs[i].X();
 		Standard_Real y = lateralFrontSlotsLocs[i].Y();
 		lateral.rectangle(latFrontSlotW, latFrontSLotH, x, y);
+		lateral.addJoint("frontSlot" + std::to_string(i), x, y - slotLength / 2, thickness / 2, -90, 90, 0);
 	}
 
 	// Lateral back slots
@@ -162,7 +164,7 @@ void Assembly::cadcode2() {
 		Standard_Real x = tabWidth + slotThicknessLoose / 2;
 		Standard_Real y = backTabsLocs[i].Y() + slotLength / 3;
 		lateral.rectangle(slotThicknessLoose, slotLength, x, y);
-		lateral.addJoint("frontSlot" + std::to_string(i), x, y - slotLength / 2, thickness / 2, -90, 90, 0);
+		lateral.addJoint("backSlot" + std::to_string(i), x, y - slotLength / 2, thickness / 2, -90, 90, 0);
 	}
 
 	lateral.build(thickness);
@@ -172,7 +174,7 @@ void Assembly::cadcode2() {
 #pragma region Shelves
 
 	std::vector<BuildingTool> shelves;
-
+	std::vector<Standard_Real> frontPinsX;
 	for (int j = 0; j < levels; j++) {
 		Standard_Real shelfDepth;
 
@@ -190,6 +192,7 @@ void Assembly::cadcode2() {
 		shelf.LineTo(firstPinX, 0);
 		for (int i = 0; i < pinsQ; i++) {
 			shelf.lineTo(0, -thickness, f1);
+			if(j == 0) frontPinsX.push_back(shelf.X() + pinLength / 2);
 			shelf.lineTo(pinLength, 0, f1);
 			shelf.lineTo(0, thickness);
 			if (pinsQ > 1 && i < pinsQ - 1)
@@ -229,16 +232,50 @@ void Assembly::cadcode2() {
 
 #pragma endregion
 
+#pragma region Front
+
+	BuildingTool front(-inWidth / 2, 0);
+	front.lineTo(inWidth, 0, f1);
+	front.lineTo(0, slotEdgeSpacing * 2 + thickness);
+	front.addJoint("tab", front.X() + slotThicknessLoose / 2, front.Y(), thickness / 2, -90);
+	front.lineTo(slotThicknessLoose, 0);
+	front.lineTo(0, -slotEdgeSpacing * 2 - thickness, f1);
+	front.lineTo(tabWidth, 0, f2);
+	front.lineTo(0, slotLength, f2);
+	front.lineTo(-tabWidth * 2 - slotThicknessLoose,0, f2);
+	front.lineTo(-slotLength/4, -slotLength/4, f2);
+	front.LineTo(-inWidth/2 + tabWidth + slotLength/4 , front.Y(), f2);
+	front.lineTo(-slotLength / 4, slotLength / 4, f2);
+	front.lineTo(-tabWidth * 2 - slotThicknessLoose, 0, f2);
+	front.lineTo(0, -slotLength, f2);
+	front.lineTo(tabWidth, 0, f1);
+	front.lineTo(0, slotEdgeSpacing * 2 + thickness);
+	front.lineTo(slotThicknessLoose, 0);
+	front.close(f1);
+
+	// slot/s
+	for (auto x : frontPinsX) {
+		front.rectangle(pinLength, slotThicknessMid, x, slotThicknessMid/2 + slotEdgeSpacing);
+	}
+
+	front.build(thickness);
+
+#pragma endregion
+
 #pragma region Assembly
 
 	back.rotate(90);
 
 	BuildingTool lateral2 = lateral;
-	lateral.rigidJoint(lateral.joints["frontSlot0"], back.joints["tab0"]);
-	lateral2.rigidJoint(lateral2.joints["frontSlot0"], back.joints["tab1"]);
+	lateral.rigidJoint(lateral.joints["backSlot0"], back.joints["tab0"]);
+	lateral2.rigidJoint(lateral2.joints["backSlot0"], back.joints["tab1"]);
 
+	std::vector<BuildingTool> fronts;
 	for (int i = 0; i < levels; i++) {
 		shelves[i].rigidJoint(shelves[i].joints["tab"], lateral.joints["slide" + std::to_string(i)]);
+
+		fronts.push_back(front);
+		fronts.back().rigidJoint(fronts.back().joints["tab"], lateral.joints["frontSlot" + std::to_string(i)]);
 	}
 
 #pragma endregion
@@ -249,13 +286,7 @@ void Assembly::cadcode2() {
 	for (auto shelf : shelves) {
 		parts.push_back(shelf);
 	}
-
-	//edges must be poblated to export SVG
-	for (auto ee : back.edges) {
-		edges.push_back(ee);
+	for(auto front : fronts)	{
+		parts.push_back(front);
 	}
-	for (auto ee : lateral.edges) {
-		edges.push_back(ee);
-	}
-
 }

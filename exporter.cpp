@@ -6,13 +6,17 @@
 #include <QFile>
 #include <QTextStream>
 
-void Exporter::add(const std::vector<std::vector<TopoDS_Edge>>& edges) {
-    this->edges = edges;
+void Exporter::add(Assembly* assembly) {
+    for (auto part : assembly->parts) {
+        this->edges.push_back(part.edges);
+    }
 
     Bnd_Box globalBox;
-    for (const auto& ee : edges) {
-        for (auto& e : ee) {
-            BRepBndLib::Add(e, globalBox);
+    for (const auto& eee : edges) {
+        for (auto& ee : eee) {
+            for (auto& e : ee) {
+                BRepBndLib::Add(e, globalBox);
+            }
         }
     }
 
@@ -39,69 +43,73 @@ bool Exporter::exportToFile(const QString& filename) const {
         << "width=\"" << width << "mm\" height=\"" << height << "mm\" "
         << "viewBox=\"0 0 " << width << " " << height << "\">\n";
 
-    for (auto& ee : edges) {
-        out << "<path d=\"M";
-        for (int i = 0; i < ee.size(); i++) {
+    for (auto& eee : edges) {
+        out << "<g style=\"fill:none;stroke:black;stroke-width:0.5px;vector-effect:non-scaling-stroke\" >\n";
+        for (auto& ee : eee) {
+            out << "<path d=\"M";
+            for (int i = 0; i < ee.size(); i++) {
 
-            Standard_Real f, l;
-            Handle(Geom_Curve) curve = BRep_Tool::Curve(ee[i], f, l);
-            if (curve.IsNull()) continue;
+                Standard_Real f, l;
+                Handle(Geom_Curve) curve = BRep_Tool::Curve(ee[i], f, l);
+                if (curve.IsNull()) continue;
 
-            GeomAdaptor_Curve adaptor(curve, f, l);
-            GeomAbs_CurveType type = adaptor.GetType();
+                GeomAdaptor_Curve adaptor(curve, f, l);
+                GeomAbs_CurveType type = adaptor.GetType();
 
-            gp_Pnt p1 = adaptor.Value(f);
-            gp_Pnt p2 = adaptor.Value(l);
+                gp_Pnt p1 = adaptor.Value(f);
+                gp_Pnt p2 = adaptor.Value(l);
 
-            float x1 = static_cast<float>(p1.X() - minX);
-            float y1 = static_cast<float>(height - (p1.Y() - minY));
-            float x2 = static_cast<float>(p2.X() - minX);
-            float y2 = static_cast<float>(height - (p2.Y() - minY));
+                float x1 = static_cast<float>(p1.X() - minX);
+                float y1 = static_cast<float>(height - (p1.Y() - minY));
+                float x2 = static_cast<float>(p2.X() - minX);
+                float y2 = static_cast<float>(height - (p2.Y() - minY));
 
-            if (i == 0) {
-                out << x1 << " " << y1;
+                if (i == 0) {
+                    out << x1 << " " << y1;
+                }
+
+                switch (type) {
+                case GeomAbs_Line: {
+                    out << "L" << x2 << " " << y2;
+                    break;
+                }
+                case GeomAbs_Circle: {
+                    gp_Circ circle = adaptor.Circle();
+
+                    float r = static_cast<float>(circle.Radius());
+
+                    int largeArc = ((l - f) > M_PI) ? 1 : 0;
+                    int sweep = 0;
+
+                    out << "A" << r << " " << r << " 0 "
+                        << largeArc << " " << sweep << " "
+                        << x2 << " " << y2;
+                    break;
+                }
+                case GeomAbs_Ellipse: {
+                    gp_Elips ellipse = adaptor.Ellipse();
+
+                    gp_Dir dir = ellipse.XAxis().Direction();
+                    Standard_Real rx = static_cast<float>(ellipse.MajorRadius());
+                    Standard_Real ry = static_cast<float>(ellipse.MinorRadius());
+
+                    if (dir.IsEqual(gp_Dir(0, 1, 0), 0.1E-5)) std::swap(rx, ry);
+
+                    int largeArc = ((l - f) > M_PI) ? 1 : 0;
+                    int sweep = 0;
+
+                    out << "A" << rx << " " << ry << " 0 "
+                        << largeArc << " " << sweep << " "
+                        << x2 << " " << y2;
+                    break;
+                }
+                default:
+                    break;
+                }
             }
-
-            switch (type) {
-            case GeomAbs_Line: {
-                out << "L" << x2 << " " << y2;
-                break;
-            }
-            case GeomAbs_Circle: {
-                gp_Circ circle = adaptor.Circle();
-
-                float r = static_cast<float>(circle.Radius());
-
-                int largeArc = ((l - f) > M_PI) ? 1 : 0;
-                int sweep = 0;
-
-                out << "A" << r << " " << r << " 0 "
-                    << largeArc << " " << sweep << " "
-                    << x2 << " " << y2;
-                break;
-            }
-            case GeomAbs_Ellipse: {
-                gp_Elips ellipse = adaptor.Ellipse();
-
-                gp_Dir dir = ellipse.XAxis().Direction();
-                Standard_Real rx = static_cast<float>(ellipse.MajorRadius());
-                Standard_Real ry = static_cast<float>(ellipse.MinorRadius());
-
-                if (dir.IsEqual(gp_Dir(0,1,0),0.1E-5)) std::swap(rx, ry);
-
-                int largeArc = ((l - f) > M_PI) ? 1 : 0;
-                int sweep = 0;
-
-                out << "A" << rx << " " << ry << " 0 "
-                    << largeArc << " " << sweep << " "
-                    << x2 << " " << y2;
-                break;
-            }
-            default:
-                break;
-            }
+            out << "Z\"/>\n";
         }
-        out << "Z\" style=\"fill:none;stroke:black;stroke-width:1px;vector-effect:non-scaling-stroke\" />\n";
+        out << "</g>\n";
     }
 
     out << "</svg>";
