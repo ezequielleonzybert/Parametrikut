@@ -55,23 +55,6 @@ enum class Align {
 	hl
 };
 
-struct vec {
-	Standard_Real x;
-	Standard_Real y;
-	Standard_Real z;
-	vec() :
-		x(0), y(0), z(0) {
-	}
-	vec(Standard_Real x, Standard_Real y, Standard_Real z = 0) :
-		x(x), y(y), z(z) {
-	}
-	void set(Standard_Real x, Standard_Real y, Standard_Real z = 0) {
-		this->x = x;
-		this->y = y;
-		this->z = z;
-	}
-};
-
 class Triangle {
 public:
 	TopoDS_Face face;
@@ -180,42 +163,6 @@ public:
 };
 
 class Ellipse {
-public:
-	TopoDS_Shape shape;
-	TopoDS_Face face;
-	Standard_Real w, h, x, y;
-	gp_Dir dir = gp_Dir(1, 0, 0);
-
-	Ellipse(Standard_Real w, Standard_Real h, Standard_Real x = 0, Standard_Real y = 0) : w(w), h(h), x(x), y(y) {
-		if (h > w) {
-			Standard_Real aux = h;
-			h = w;
-			w = aux;
-			dir.SetXYZ(gp_XYZ(0, 1, 0));
-		}
-		gp_Ax2 axis(gp_Pnt(x, y, 0), gp_Dir(0, 0, 1), dir);
-		gp_Elips elips(axis, w, h);
-		Handle(Geom_Ellipse) handle = GC_MakeEllipse(elips).Value();
-		TopoDS_Edge edge = BRepBuilderAPI_MakeEdge(handle);
-		TopoDS_Wire wire = BRepBuilderAPI_MakeWire(edge);
-		face = BRepBuilderAPI_MakeFace(wire).Face();
-		shape = BRepBuilderAPI_MakeFace(wire).Shape();
-	};
-
-	Standard_Real getRadAtY(Standard_Real y) {
-		return w * sqrt(1 - (y * y) / (h * h));
-	}
-
-	operator TopoDS_Shape() const {
-		return TopoDS_Shape(shape);
-	}
-	operator TopoDS_Face() const {
-		return TopoDS_Face(face);
-	}
-
-};
-
-class Ellipse2 {
 
 	gp_Pnt center;
 	Standard_Real rx;
@@ -226,7 +173,7 @@ public:
 
 	gp_Elips ellipse;
 
-	Ellipse2(gp_Pnt center, Standard_Real rx, Standard_Real ry) :
+	Ellipse(gp_Pnt center, Standard_Real rx, Standard_Real ry) :
 		center(center),
 		rx(rx),
 		ry(ry)
@@ -247,178 +194,17 @@ public:
 
 };
 
-class Part; //forward declaration
-struct Joint {
-	Joint() {};
-	Joint(gp_Trsf local, gp_Trsf global, std::string label, Part* part) : local(local), global(global), label(label), part(part) {};
+inline TopoDS_Edge deepReverse(const TopoDS_Edge& edge) {
+	Standard_Real f, l;
+	Handle(Geom_Curve) curve = BRep_Tool::Curve(edge, f, l);
 
-	gp_Trsf local;
-	gp_Trsf global;
-	std::string label;
-	Part* part;
-};
+	Handle(Geom_Curve) reversed = curve->Reversed();
 
-class Part {
+	BRepBuilderAPI_MakeEdge mk(reversed, -l, -f);
+	TopoDS_Edge newEdge = mk.Edge();
 
-public:
-	const char* label = nullptr;
-	TopoDS_Shape shape;
-	std::unordered_map<std::string, Joint> joints;
-	gp_Trsf transformation;
-	gp_Trsf connection;
-	std::vector<Part*> connectedParts;
-
-	Part() {}
-
-	Part(const Part& other) {
-		label = other.label;
-		shape = other.shape;
-		transformation = other.transformation;
-
-		// deep copy de los joints
-		for (const auto& [jointLabel, joint] : other.joints) {
-			joints[jointLabel] = Joint(
-				joint.local,
-				joint.global,
-				joint.label,
-				this  // <- apunta al Part copiado
-			);
-		}
-
-		// connectedParts NO se copia porque los hijos siguen siendo del original
-		// Si quer�s copiar la jerarqu�a completa, habr�a que hacer un deep copy recursivo
-		connectedParts.clear();
-	}
-
-	Part(TopoDS_Shape s) : shape(s) {}
-
-	TopoDS_Shape Shape() {
-		return shape;
-	}
-
-	void translate(Standard_Real x = 0, Standard_Real y = 0, Standard_Real z = 0) {
-		translateLogic(x, y, z);
-	}
-
-	void translate(gp_XYZ coords) {
-		translateLogic(coords.X(), coords.Y(), coords.Z());
-	}
-
-	void rotate(Standard_Real x = 0, Standard_Real y = 0, Standard_Real z = 0) {
-		gp_Trsf tr;
-		Standard_Real a = x * M_PI / 180.0f;
-		Standard_Real b = y * M_PI / 180.0f;
-		Standard_Real c = z * M_PI / 180.0f;
-		gp_Quaternion q;
-		q.SetEulerAngles(gp_Extrinsic_XYZ, a, b, c);
-		tr.SetRotationPart(q);
-
-		transformation *= tr;
-		shape = shape.Located(TopLoc_Location(transformation));
-
-		for (auto& [label, j] : joints) {
-			j.global = transformation * j.local;
-		}
-
-		applyParentTransform(transformation);
-	}
-
-	Part rotated(Standard_Real x = 0, Standard_Real y = 0, Standard_Real z = 0) const {
-		Part r = *this;
-		gp_Trsf tr;
-		Standard_Real a = x * M_PI / 180.0, b = y * M_PI / 180.0, c = z * M_PI / 180.0;
-		gp_Quaternion q; q.SetEulerAngles(gp_Extrinsic_XYZ, a, b, c);
-		tr.SetRotationPart(q);
-		r.shape = r.shape.Located(TopLoc_Location(transformation * tr));
-		for (auto& [label, j] : r.joints)
-			j.global = (transformation * tr) * j.local;
-		r.applyParentTransform(transformation * tr);
-		return r;
-	}
-
-	Part mirrored(bool horizontal = true) const {
-		Part r = *this;
-		gp_Pnt origin = transformation.TranslationPart();
-		gp_Dir normal = horizontal ? gp_Dir(0, 1, 0) : gp_Dir(1, 0, 0);
-		gp_Ax2 ax(origin, normal);
-		gp_Trsf tr; tr.SetMirror(ax);
-		r.shape = r.shape.Located(TopLoc_Location(transformation * tr));
-		for (auto& [label, j] : r.joints)
-			j.global = (transformation * tr) * j.local;
-		r.applyParentTransform(transformation * tr);
-		return r;
-	}
-
-	void applyParentTransform(const gp_Trsf& parentGlobal) {
-		transformation = parentGlobal * connection;
-		shape = shape.Located(TopLoc_Location(transformation));
-		for (auto& [label, j] : joints) {
-			j.global = transformation * j.local;
-		}
-		for (Part* p : connectedParts) {
-			p->applyParentTransform(transformation);
-		}
-	}
-
-	void addJoint(std::string label, Standard_Real x, Standard_Real y, Standard_Real z = 0, Standard_Real xr = 0, Standard_Real yr = 0, Standard_Real zr = 0) {
-		addJointLogic(label, x, y, z, xr, yr, zr);
-	}
-
-	void addJoint(std::string label, vec pos, Standard_Real xr = 0, Standard_Real yr = 0, Standard_Real zr = 0) {
-		addJointLogic(label, pos.x, pos.y, pos.z, xr, yr, zr);
-	}
-
-	void connect(Joint& j1, Joint& j2) {
-		Part* parent = j2.part;
-		parent->connectedParts.push_back(this);
-
-		transformation = parent->transformation * j2.local * j1.local.Inverted();
-		connection = parent->transformation.Inverted() * transformation;
-		shape = shape.Located(TopLoc_Location(transformation));
-
-		for (auto& [label, j] : joints)
-			j.global = transformation * j.local;
-	}
-
-	operator TopoDS_Shape() const {
-		return TopoDS_Shape(shape);
-	}
-
-private:
-	void translateLogic(Standard_Real x, Standard_Real y, Standard_Real z) {
-		gp_Trsf tr;
-		gp_Vec pos(x, y, z);
-		tr.SetTranslationPart(pos);
-
-		transformation *= tr;
-		shape = shape.Located(transformation);
-
-		for (auto& [label, j] : joints) {
-			j.global = transformation * j.local;
-		}
-		applyParentTransform(transformation);
-		//for (Part* p : connectedParts) {
-		//	p->applyParentTransform(transformation);
-		//}
-	}
-
-	void addJointLogic(std::string label, Standard_Real x, Standard_Real y, Standard_Real z, Standard_Real xr, Standard_Real yr, Standard_Real zr) {
-		gp_Trsf tr;
-
-		Standard_Real a = xr * M_PI / 180.0f;
-		Standard_Real b = yr * M_PI / 180.0f;
-		Standard_Real c = zr * M_PI / 180.0f;
-		gp_Quaternion q;
-		q.SetEulerAngles(gp_Extrinsic_XYZ, a, b, c);
-		tr.SetRotationPart(q);
-
-		tr.SetTranslationPart(gp_Vec(x, y, z));
-
-		Joint j(tr, transformation * tr, label, this);
-
-		joints.insert({ label, j });
-	}
-};
+	return newEdge;
+}
 
 class BuildingTool {
 
@@ -697,6 +483,27 @@ public:
 		applyParentTransform(transformation);
 	}
 
+	BuildingTool mirrored(bool horizontal = true) {
+		BuildingTool bt = *this;
+		gp_Pnt origin = transformation.TranslationPart();
+		gp_Dir normal = horizontal ? gp_Dir(0, 1, 0) : gp_Dir(1, 0, 0);
+		gp_Ax2 ax(gp_Pnt(0,0,0), normal);
+		gp_Trsf tr; tr.SetMirror(ax);
+		bt.shape = bt.shape.Located(TopLoc_Location(transformation * tr));
+		for (auto& [label, j] : bt.joints)
+			j.global = (transformation * tr) * j.local;
+		bt.applyParentTransform(transformation * tr);
+
+		for (auto& ee : bt.edges) {
+			for (auto& e : ee) {
+				//BRepBuilderAPI_Transform aBRepTrsf(e, tr);
+				//e = TopoDS::Edge(aBRepTrsf.Shape());
+				//e = deepReverse(e);
+			}
+		}
+		return bt;
+	}
+
 	void addJoint(std::string label, Standard_Real x, Standard_Real y, Standard_Real z = 0, Standard_Real xr = 0, Standard_Real yr = 0, Standard_Real zr = 0) {
 		gp_Trsf tr;
 
@@ -750,18 +557,6 @@ inline TopoDS_Vertex makeVertex(Standard_Real x, Standard_Real y, Standard_Real 
 	return mkVertex.Vertex();
 }
 
-inline TopoDS_Edge deepReverse(const TopoDS_Edge& edge) {
-	Standard_Real f, l;
-	Handle(Geom_Curve) curve = BRep_Tool::Curve(edge, f, l);
-
-	Handle(Geom_Curve) reversed = curve->Reversed();
-
-	BRepBuilderAPI_MakeEdge mk(reversed, -l, -f);
-	TopoDS_Edge newEdge = mk.Edge();
-
-	return newEdge;
-}
-
 inline TopoDS_Edge redrawEdge(const TopoDS_Edge& edge) {
 	Standard_Real f, l;
 	Handle(Geom_Curve) curve = BRep_Tool::Curve(edge, f, l);
@@ -813,21 +608,6 @@ inline TopoDS_Shape regenShape(const TopoDS_Shape& shape) {
 	}
 
 	return mkFace.Shape();
-}
-
-inline TopoDS_Shape translate(TopoDS_Shape shape, vec v) {
-	gp_Trsf tr;
-	tr.SetTranslation(gp_Vec(v.x, v.y, v.z));
-	BRepBuilderAPI_Transform result(shape, tr, true);
-	return result.Shape();
-}
-
-inline TopoDS_Shape mirror(TopoDS_Shape shape, vec dir, vec pnt = vec::vec(0, 0, 0)) {
-	gp_Trsf tr;
-	gp_Ax2 ax(gp_Pnt(pnt.x, pnt.y, pnt.z), gp_Dir(dir.x, dir.y, dir.z));
-	tr.SetMirror(ax);
-	BRepBuilderAPI_Transform result(shape, tr, true);
-	return result.Shape().Reversed();
 }
 
 inline TopoDS_Shape fuse(TopTools_ListOfShape* args) {
@@ -885,11 +665,6 @@ inline TopoDS_Shape intersect(TopTools_ListOfShape* args, TopTools_ListOfShape* 
 	TopoDS_Shape shape = common.Shape();
 
 	return regenShape(shape);
-}
-
-inline Part extrude(TopoDS_Shape face, Standard_Real thickness) {
-	TopoDS_Shape p = BRepPrimAPI_MakePrism(face, gp_Vec(0, 0, thickness));
-	return Part(p);
 }
 
 inline std::vector<TopoDS_Vertex> vertices(const TopoDS_Shape& shape) {
@@ -1227,29 +1002,6 @@ inline Bnd_Box getBB(TopoDS_Shape shape) {
 	return bb;
 }
 
-inline TopoDS_Compound pack(std::vector<Part> p, Standard_Real margin = 10) {
-	BRep_Builder b; TopoDS_Compound c; b.MakeCompound(c);
-	int n = p.size(); if (!n)return c;
-	int cols = ceil(sqrt(n)), rows = ceil((Standard_Real)n / cols);
-	std::vector<Bnd_Box> bb(n); for (int i = 0; i < n; i++)bb[i] = getBB(p[i].shape);
-	std::vector<Standard_Real> cw(cols, 0), rh(rows, 0);
-	for (int i = 0; i < n; i++) {
-		Standard_Real x0, y0, z0, x1, y1, z1; bb[i].Get(x0, y0, z0, x1, y1, z1);
-		cw[i % cols] = (std::max)(cw[i % cols], x1 - x0); rh[i / cols] = (std::max)(rh[i / cols], y1 - y0);
-	}
-	Standard_Real y = 0; for (int r = 0; r < rows; r++) {
-		Standard_Real x = 0;
-		for (int cIdx = 0; cIdx < cols; cIdx++) {
-			int i = r * cols + cIdx; if (i >= n)break;
-			Standard_Real x0, y0, z0, x1, y1, z1; bb[i].Get(x0, y0, z0, x1, y1, z1);
-			gp_Trsf t; t.SetTranslation(gp_Vec(-x0 + x, -y0 + y, 0));
-			b.Add(c, BRepBuilderAPI_Transform(p[i].shape, t).Shape());
-			x += cw[cIdx] + margin;
-		}y += rh[r] + margin;
-	}
-	return c;
-}
-
 inline std::vector<TopoDS_Wire> section(const TopoDS_Shape& shape, double z = 1.0) {
 	gp_Pln plane(gp_Pnt(0, 0, z), gp_Dir(0, 0, 1));
 	BRepAlgoAPI_Section sec(shape, plane, Standard_False);
@@ -1354,3 +1106,267 @@ inline TopoDS_Wire rectangleWire(Standard_Real w, Standard_Real h, Standard_Real
 
 	return mkWire.Wire();
 }
+
+//struct vec {
+//	Standard_Real x;
+//	Standard_Real y;
+//	Standard_Real z;
+//	vec() :
+//		x(0), y(0), z(0) {
+//	}
+//	vec(Standard_Real x, Standard_Real y, Standard_Real z = 0) :
+//		x(x), y(y), z(z) {
+//	}
+//	void set(Standard_Real x, Standard_Real y, Standard_Real z = 0) {
+//		this->x = x;
+//		this->y = y;
+//		this->z = z;
+//	}
+//};
+//class Ellipse {
+//public:
+//	TopoDS_Shape shape;
+//	TopoDS_Face face;
+//	Standard_Real w, h, x, y;
+//	gp_Dir dir = gp_Dir(1, 0, 0);
+//
+//	Ellipse(Standard_Real w, Standard_Real h, Standard_Real x = 0, Standard_Real y = 0) : w(w), h(h), x(x), y(y) {
+//		if (h > w) {
+//			Standard_Real aux = h;
+//			h = w;
+//			w = aux;
+//			dir.SetXYZ(gp_XYZ(0, 1, 0));
+//		}
+//		gp_Ax2 axis(gp_Pnt(x, y, 0), gp_Dir(0, 0, 1), dir);
+//		gp_Elips elips(axis, w, h);
+//		Handle(Geom_Ellipse) handle = GC_MakeEllipse(elips).Value();
+//		TopoDS_Edge edge = BRepBuilderAPI_MakeEdge(handle);
+//		TopoDS_Wire wire = BRepBuilderAPI_MakeWire(edge);
+//		face = BRepBuilderAPI_MakeFace(wire).Face();
+//		shape = BRepBuilderAPI_MakeFace(wire).Shape();
+//	};
+//
+//	Standard_Real getRadAtY(Standard_Real y) {
+//		return w * sqrt(1 - (y * y) / (h * h));
+//	}
+//
+//	operator TopoDS_Shape() const {
+//		return TopoDS_Shape(shape);
+//	}
+//	operator TopoDS_Face() const {
+//		return TopoDS_Face(face);
+//	}
+//
+//};
+//class Part; //forward declaration
+//struct Joint {
+//	Joint() {};
+//	Joint(gp_Trsf local, gp_Trsf global, std::string label, Part* part) : local(local), global(global), label(label), part(part) {};
+//
+//	gp_Trsf local;
+//	gp_Trsf global;
+//	std::string label;
+//	Part* part;
+//};
+//
+//class Part {
+//
+//public:
+//	const char* label = nullptr;
+//	TopoDS_Shape shape;
+//	std::unordered_map<std::string, Joint> joints;
+//	gp_Trsf transformation;
+//	gp_Trsf connection;
+//	std::vector<Part*> connectedParts;
+//
+//	Part() {}
+//
+//	Part(const Part& other) {
+//		label = other.label;
+//		shape = other.shape;
+//		transformation = other.transformation;
+//
+//		// deep copy de los joints
+//		for (const auto& [jointLabel, joint] : other.joints) {
+//			joints[jointLabel] = Joint(
+//				joint.local,
+//				joint.global,
+//				joint.label,
+//				this  // <- apunta al Part copiado
+//			);
+//		}
+//
+//		// connectedParts NO se copia porque los hijos siguen siendo del original
+//		// Si quer�s copiar la jerarqu�a completa, habr�a que hacer un deep copy recursivo
+//		connectedParts.clear();
+//	}
+//
+//	Part(TopoDS_Shape s) : shape(s) {}
+//
+//	TopoDS_Shape Shape() {
+//		return shape;
+//	}
+//
+//	void translate(Standard_Real x = 0, Standard_Real y = 0, Standard_Real z = 0) {
+//		translateLogic(x, y, z);
+//	}
+//
+//	void translate(gp_XYZ coords) {
+//		translateLogic(coords.X(), coords.Y(), coords.Z());
+//	}
+//
+//	void rotate(Standard_Real x = 0, Standard_Real y = 0, Standard_Real z = 0) {
+//		gp_Trsf tr;
+//		Standard_Real a = x * M_PI / 180.0f;
+//		Standard_Real b = y * M_PI / 180.0f;
+//		Standard_Real c = z * M_PI / 180.0f;
+//		gp_Quaternion q;
+//		q.SetEulerAngles(gp_Extrinsic_XYZ, a, b, c);
+//		tr.SetRotationPart(q);
+//
+//		transformation *= tr;
+//		shape = shape.Located(TopLoc_Location(transformation));
+//
+//		for (auto& [label, j] : joints) {
+//			j.global = transformation * j.local;
+//		}
+//
+//		applyParentTransform(transformation);
+//	}
+//
+//	Part rotated(Standard_Real x = 0, Standard_Real y = 0, Standard_Real z = 0) const {
+//		Part r = *this;
+//		gp_Trsf tr;
+//		Standard_Real a = x * M_PI / 180.0, b = y * M_PI / 180.0, c = z * M_PI / 180.0;
+//		gp_Quaternion q; q.SetEulerAngles(gp_Extrinsic_XYZ, a, b, c);
+//		tr.SetRotationPart(q);
+//		r.shape = r.shape.Located(TopLoc_Location(transformation * tr));
+//		for (auto& [label, j] : r.joints)
+//			j.global = (transformation * tr) * j.local;
+//		r.applyParentTransform(transformation * tr);
+//		return r;
+//	}
+//
+//	Part mirrored(bool horizontal = true) const {
+//		Part r = *this;
+//		gp_Pnt origin = transformation.TranslationPart();
+//		gp_Dir normal = horizontal ? gp_Dir(0, 1, 0) : gp_Dir(1, 0, 0);
+//		gp_Ax2 ax(origin, normal);
+//		gp_Trsf tr; tr.SetMirror(ax);
+//		r.shape = r.shape.Located(TopLoc_Location(transformation * tr));
+//		for (auto& [label, j] : r.joints)
+//			j.global = (transformation * tr) * j.local;
+//		r.applyParentTransform(transformation * tr);
+//		return r;
+//	}
+//
+//	void applyParentTransform(const gp_Trsf& parentGlobal) {
+//		transformation = parentGlobal * connection;
+//		shape = shape.Located(TopLoc_Location(transformation));
+//		for (auto& [label, j] : joints) {
+//			j.global = transformation * j.local;
+//		}
+//		for (Part* p : connectedParts) {
+//			p->applyParentTransform(transformation);
+//		}
+//	}
+//
+//	void addJoint(std::string label, Standard_Real x, Standard_Real y, Standard_Real z = 0, Standard_Real xr = 0, Standard_Real yr = 0, Standard_Real zr = 0) {
+//		addJointLogic(label, x, y, z, xr, yr, zr);
+//	}
+//
+//	void addJoint(std::string label, vec pos, Standard_Real xr = 0, Standard_Real yr = 0, Standard_Real zr = 0) {
+//		addJointLogic(label, pos.x, pos.y, pos.z, xr, yr, zr);
+//	}
+//
+//	void connect(Joint& j1, Joint& j2) {
+//		Part* parent = j2.part;
+//		parent->connectedParts.push_back(this);
+//
+//		transformation = parent->transformation * j2.local * j1.local.Inverted();
+//		connection = parent->transformation.Inverted() * transformation;
+//		shape = shape.Located(TopLoc_Location(transformation));
+//
+//		for (auto& [label, j] : joints)
+//			j.global = transformation * j.local;
+//	}
+//
+//	operator TopoDS_Shape() const {
+//		return TopoDS_Shape(shape);
+//	}
+//
+//private:
+//	void translateLogic(Standard_Real x, Standard_Real y, Standard_Real z) {
+//		gp_Trsf tr;
+//		gp_Vec pos(x, y, z);
+//		tr.SetTranslationPart(pos);
+//
+//		transformation *= tr;
+//		shape = shape.Located(transformation);
+//
+//		for (auto& [label, j] : joints) {
+//			j.global = transformation * j.local;
+//		}
+//		applyParentTransform(transformation);
+//		//for (Part* p : connectedParts) {
+//		//	p->applyParentTransform(transformation);
+//		//}
+//	}
+//
+//	void addJointLogic(std::string label, Standard_Real x, Standard_Real y, Standard_Real z, Standard_Real xr, Standard_Real yr, Standard_Real zr) {
+//		gp_Trsf tr;
+//
+//		Standard_Real a = xr * M_PI / 180.0f;
+//		Standard_Real b = yr * M_PI / 180.0f;
+//		Standard_Real c = zr * M_PI / 180.0f;
+//		gp_Quaternion q;
+//		q.SetEulerAngles(gp_Extrinsic_XYZ, a, b, c);
+//		tr.SetRotationPart(q);
+//
+//		tr.SetTranslationPart(gp_Vec(x, y, z));
+//
+//		Joint j(tr, transformation * tr, label, this);
+//
+//		joints.insert({ label, j });
+//	}
+//};
+//inline Part extrude(TopoDS_Shape face, Standard_Real thickness) {
+//	TopoDS_Shape p = BRepPrimAPI_MakePrism(face, gp_Vec(0, 0, thickness));
+//	return Part(p);
+//}
+//inline TopoDS_Shape translate(TopoDS_Shape shape, vec v) {
+//	gp_Trsf tr;
+//	tr.SetTranslation(gp_Vec(v.x, v.y, v.z));
+//	BRepBuilderAPI_Transform result(shape, tr, true);
+//	return result.Shape();
+//}
+//
+//inline TopoDS_Shape mirror(TopoDS_Shape shape, vec dir, vec pnt = vec::vec(0, 0, 0)) {
+//	gp_Trsf tr;
+//	gp_Ax2 ax(gp_Pnt(pnt.x, pnt.y, pnt.z), gp_Dir(dir.x, dir.y, dir.z));
+//	tr.SetMirror(ax);
+//	BRepBuilderAPI_Transform result(shape, tr, true);
+//	return result.Shape().Reversed();
+//}
+//inline TopoDS_Compound pack(std::vector<Part> p, Standard_Real margin = 10) {
+//	BRep_Builder b; TopoDS_Compound c; b.MakeCompound(c);
+//	int n = p.size(); if (!n)return c;
+//	int cols = ceil(sqrt(n)), rows = ceil((Standard_Real)n / cols);
+//	std::vector<Bnd_Box> bb(n); for (int i = 0; i < n; i++)bb[i] = getBB(p[i].shape);
+//	std::vector<Standard_Real> cw(cols, 0), rh(rows, 0);
+//	for (int i = 0; i < n; i++) {
+//		Standard_Real x0, y0, z0, x1, y1, z1; bb[i].Get(x0, y0, z0, x1, y1, z1);
+//		cw[i % cols] = (std::max)(cw[i % cols], x1 - x0); rh[i / cols] = (std::max)(rh[i / cols], y1 - y0);
+//	}
+//	Standard_Real y = 0; for (int r = 0; r < rows; r++) {
+//		Standard_Real x = 0;
+//		for (int cIdx = 0; cIdx < cols; cIdx++) {
+//			int i = r * cols + cIdx; if (i >= n)break;
+//			Standard_Real x0, y0, z0, x1, y1, z1; bb[i].Get(x0, y0, z0, x1, y1, z1);
+//			gp_Trsf t; t.SetTranslation(gp_Vec(-x0 + x, -y0 + y, 0));
+//			b.Add(c, BRepBuilderAPI_Transform(p[i].shape, t).Shape());
+//			x += cw[cIdx] + margin;
+//		}y += rh[r] + margin;
+//	}
+//	return c;
+//}

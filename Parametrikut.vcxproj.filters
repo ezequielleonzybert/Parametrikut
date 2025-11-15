@@ -32,13 +32,10 @@
     <ClCompile Include="OcctQWidgetViewer.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="cadcode.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
     <ClCompile Include="exporter.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="cadcode2.cpp">
+    <ClCompile Include="cadcode.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>

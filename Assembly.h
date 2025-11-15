@@ -37,7 +37,6 @@ struct Assembly{
 
 	int levels;
 	int backPinsQ;
-	//int frontPinsQ;
 	int tabs;
 
 	Standard_Real inWidth;
@@ -56,9 +55,7 @@ struct Assembly{
 	int getParamVali(const char* name);
 	Standard_Real getParamValf(const char* name);
 
-	void cadCode();
-	void cadcode2();
-	Part shelf(Standard_Real h);
+	void cadcode();
 
 private:
 	void recalculateParams();

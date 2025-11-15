@@ -59,15 +59,13 @@ Parametrikut::Parametrikut(QWidget *parent)
     )");
 
     connect(btnExport, &QPushButton::clicked, this, [this]() {
-        QString filePath = QFileDialog::getSaveFileName(
+        QString filepath = QFileDialog::getSaveFileName(
             this,
             "Export to SVG",
             QDir::homePath(),
             "SVG Files (*.svg);;All Files (*)"
         );
-        Exporter exporter;
-        exporter.add(assembly);
-        exporter.exportToFile(filePath);
+        Exporter exporter(assembly, filepath);
     });
 }
 

@@ -52,7 +52,7 @@ void Assembly::build()
 
 	recalculateParams();
 
-	cadcode2();
+	cadcode();
 }
 
 void Assembly::addParam(const char* name, int vali) {

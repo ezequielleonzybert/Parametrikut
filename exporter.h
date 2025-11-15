@@ -5,20 +5,23 @@
 #include "Assembly.h"
 
 class Exporter {
-public:
-    Exporter() = default;
-    ~Exporter() = default;
-
-    void add(const std::vector<TopoDS_Wire>& wires);
-
-    /// Receives the edges to export to an SVG file. They must be already ordered by wires and continuity
-    void add(Assembly* assembly);
-    bool exportToFile(const QString& filename) const;
+    struct PartSketch{
+        std::vector<std::vector<TopoDS_Edge>> edges;
+        Bnd_Box bb;
+        Standard_Real width, height;
+        gp_Pnt translation;
+    };
 
 private:
-    std::vector<TopoDS_Wire> wires;
+    std::vector<PartSketch> partSketches;
     std::vector<std::vector<std::vector<TopoDS_Edge>>> edges;
     float width;
     float height;
     float minX, maxX, minY, maxY;
+
+    void add(Assembly* assembly);
+    bool exportToFile(const QString& filename) const;
+
+public:
+    Exporter(Assembly* assembly, QString filepath);
 };
